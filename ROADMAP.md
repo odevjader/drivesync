@@ -27,47 +27,17 @@ Este documento detalha o plano de desenvolvimento para o projeto DriveSync, incl
 * **Resumo:** Implementado o módulo de gerenciamento de estado em `drivesync_app/gerenciador_estado.py` com funções `load_state` e `save_state` para carregar e salvar o estado da aplicação (e.g., `drivesync_state.json`). Inclui escrita atómica para `save_state` e tratamento de erros. `main.py` atualizado para usar estas funções e `config.ini` atualizado com a chave `state_file`.
 * **Ficheiros Modificados:** `drivesync_app/gerenciador_estado.py`, `drivesync_app/main.py`, `config.ini`.
 
+### ✅ Tarefa 4: Operações Principais do Drive (Criação de Pastas e Listagem de Ficheiros)
+* **Status:** ✅ **Concluído**
+* **Branch:** `feature/drive-core-operations`
+* **Resumo:** Implementado `find_or_create_folder` e `list_folder_contents` em `drivesync_app/gerenciador_drive.py`. Adicionado `--test-drive-ops` para `main.py` para testar estas interações com o Drive. Inclui tratamento básico de erros e paginação para listagem.
+* **Ficheiros Modificados:** `drivesync_app/gerenciador_drive.py`, `drivesync_app/main.py`.
+
 ---
 
 ## Próximas Tarefas (para Jules)
 
-### ⏳ Tarefa 4: Operações Principais do Drive (Criação de Pastas e Listagem de Ficheiros)
-* **Branch Sugerida:** `feature/drive-core-operations`
-* **Prompt para Jules (Inglês):**
-    ```
-    Implement core Google Drive operations in `drivesync_app/gerenciador_drive.py`.
-    This module will use the authenticated Drive service object obtained from `autenticacao_drive.py`.
-
-    Implement the following functions:
-
-    1.  `find_or_create_folder(drive_service, parent_folder_id, folder_name)`:
-        * Accepts the `drive_service` object, the `parent_folder_id` (can be 'root' or an actual folder ID for subfolders), and the `folder_name` to find or create.
-        * Searches for a folder with `folder_name` and `mimeType='application/vnd.google-apps.folder'` under the specified `parent_folder_id`.
-        * If multiple folders with the same name exist, log a warning and use the first one found.
-        * If found, return its ID.
-        * If not found, create the folder under `parent_folder_id` with `folder_name` and return the new folder's ID.
-        * Implement robust error handling for API calls, including retries with exponential backoff for common transient errors (e.g., rate limits, server errors). Log API errors.
-
-    2.  `list_folder_contents(drive_service, folder_id)`:
-        * Accepts the `drive_service` object and a `folder_id`.
-        * Lists all files and folders directly within the given `folder_id`.
-        * The query should retrieve `id`, `name`, `mimeType`, `md5Checksum` (for files), and `modifiedTime` for each item.
-        * Handle API pagination to retrieve all items if the folder contains many entries.
-        * Return a dictionary where keys are item names and values are dictionaries containing their `id`, `mimeType`, `md5Checksum` (if applicable), and `modifiedTime`.
-        * Implement error handling and retries as above.
-
-    Modify `drivesync_app/main.py`:
-    * Add a new command-line argument, e.g., `--test-drive-ops`.
-    * If this argument is provided, after authentication, perform test operations:
-        * Attempt to find or create a test folder (e.g., "DriveSync Test Folder") in the root of the user's Drive. Log the ID of this folder.
-        * Attempt to list the contents of the user's root Drive folder. Log the names and types of the first few items found.
-    ```
-* **Ficheiros a Modificar:** `drivesync_app/gerenciador_drive.py`, `drivesync_app/main.py`.
-* **Considerações:** Tratamento de erros da API do Drive, paginação, e a importância do `mimeType` para diferenciar ficheiros de pastas.
-
----
-
-### 📋 Tarefa 5: Módulo Processador de Ficheiros (Travessia de Ficheiros Locais)
+### ⏳ Tarefa 5: Módulo Processador de Ficheiros (Travessia de Ficheiros Locais)
 * **Branch Sugerida:** `feature/local-file-processor`
 * **Prompt para Jules (Inglês):**
     ```

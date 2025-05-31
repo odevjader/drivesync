@@ -7,7 +7,8 @@ import sys # Importar sys
 from drivesync_app.logger_config import setup_logger
 from drivesync_app.autenticacao_drive import get_drive_service
 from drivesync_app.gerenciador_estado import load_state, save_state
-from drivesync_app.gerenciador_drive import find_or_create_folder, list_folder_contents # Drive ops
+from drivesync_app.gerenciador_drive import find_or_create_folder, list_folder_contents
+from drivesync_app.processador_arquivos import walk_local_directory # Local file processing
 
 def main():
     """Função principal para executar o aplicativo."""
@@ -87,9 +88,39 @@ def main():
         else:
             logger.warning("Não foi possível executar as operações de teste do Drive porque o serviço do Drive não está disponível.")
 
-    if not any(arg in sys.argv for arg in ['--authenticate', '--test-drive-ops']):
-        logger.info("Nenhuma ação específica (--authenticate, --test-drive-ops) solicitada via argumentos. O aplicativo continuará se houver mais lógica principal.")
-        # Lógica principal do aplicativo viria aqui
+    # Lógica para --list-local
+    if "--list-local" in sys.argv:
+        logger.info("Listagem de arquivos locais solicitada (--list-local)...")
+        source_folder = None
+        try:
+            source_folder = config['Sync']['source_folder']
+            if not source_folder: # Check for empty string after getting it
+                logger.error("Configuração 'source_folder' em [Sync] está vazia. Defina o caminho da pasta de origem.")
+                source_folder = None # Ensure it's None if empty
+        except KeyError:
+            logger.error("Configuração 'source_folder' não encontrada na seção [Sync] do config.ini.")
+
+        if source_folder:
+            logger.info(f"Listando arquivos locais de: {source_folder}")
+            try:
+                item_count = 0
+                for item in walk_local_directory(source_folder):
+                    item_count += 1
+                    if item['type'] == 'file':
+                        logger.info(f"  Encontrado: Tipo=arquivo, Nome='{item['name']}', CaminhoRelativo='{item['path']}', Tamanho={item['size']}")
+                    else: # pasta
+                        logger.info(f"  Encontrado: Tipo=pasta, Nome='{item['name']}', CaminhoRelativo='{item['path']}'")
+                if item_count == 0:
+                    logger.info(f"Nenhum item encontrado em '{source_folder}'.")
+            except Exception as e: # Catch potential errors from walk_local_directory itself if it raises them
+                logger.error(f"Erro ao listar arquivos locais de '{source_folder}': {e}")
+        else:
+            logger.info("Listagem de arquivos locais não pode prosseguir devido à falta da configuração 'source_folder'.")
+
+    # Se nenhum argumento de ação principal foi passado
+    if not any(arg in sys.argv for arg in ['--authenticate', '--test-drive-ops', '--list-local']):
+        logger.info("Nenhuma ação específica (--authenticate, --test-drive-ops, --list-local) solicitada. Use --help para ver as opções.")
+        # Lógica principal do aplicativo (se houver alguma padrão) viria aqui
 
     # Exemplo:
     # logger.debug("Este é um debug da aplicação principal.")
