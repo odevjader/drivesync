@@ -2,8 +2,10 @@
 
 import configparser
 import logging
-import os # Added os module
+import os
+import sys # Importar sys
 from drivesync_app.logger_config import setup_logger
+from drivesync_app.autenticacao_drive import get_drive_service # Importar get_drive_service
 
 def main():
     """Função principal para executar o aplicativo."""
@@ -17,35 +19,47 @@ def main():
     files_read = config.read(config_file_path)
 
     if not files_read:
-        # Se config.ini não foi encontrado ou está vazio, configurar um logger básico
-        # para que o erro possa ser registrado e usar defaults.
         # Esta configuração básica de logging será usada apenas para logar o erro abaixo.
         # setup_logger irá reconfigurar o logging com base nos defaults ou no arquivo.
         logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
         logging.error(f"Arquivo de configuração '{config_file_path}' não encontrado ou vazio. Logger usará defaults internos.")
-        # Não é estritamente necessário popular o config aqui se setup_logger tem fallbacks robustos,
-        # mas pode ser feito se quisermos controlar os fallbacks de main.py de forma explícita.
-        # Por ora, deixaremos que setup_logger use seus próprios fallbacks se o arquivo não for lido.
-        # Se quiséssemos definir fallbacks aqui:
-        # if not config.has_section('Logging'):
-        # config.add_section('Logging')
-        # config.set('Logging', 'log_file', 'main_fallback.log')
-        # config.set('Logging', 'log_level', 'INFO')
 
     # Configurar o logger
-    setup_logger(config) # Passamos o config, que pode estar vazio se o arquivo não foi lido.
-                         # setup_logger é responsável por lidar com isso usando seus fallbacks.
+    # Passamos o config, que pode estar vazio se o arquivo não foi lido.
+    # setup_logger é responsável por lidar com isso usando seus fallbacks.
+    setup_logger(config)
 
     # Obter o logger para este módulo
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger(__name__) # Logger para main.py
     logger.info("DriveSyncApp iniciado. Logger configurado.")
 
-    # Lógica principal do aplicativo viria aqui
+    # Verificar argumento --authenticate
+    if len(sys.argv) > 1 and sys.argv[1] == '--authenticate':
+        logger.info("Autenticação solicitada via argumento --authenticate.")
+
+        # O config já foi lido (ou está vazio se o arquivo falhou ao carregar,
+        # get_drive_service tem sua própria lógica de fallback/erro para isso)
+        drive_service = get_drive_service(config)
+
+        if drive_service:
+            logger.info("Serviço do Google Drive autenticado e obtido com sucesso.")
+            # Aqui você poderia, por exemplo, armazenar o drive_service ou usá-lo
+            # para uma operação inicial, ou apenas autenticar para futuras execuções.
+        else:
+            logger.error("Falha ao obter o serviço do Google Drive. Verifique os logs e a configuração.")
+    else:
+        logger.info("Nenhuma ação específica solicitada via argumentos. O aplicativo continuará normalmente se houver mais lógica.")
+        # Lógica principal do aplicativo viria aqui se não for apenas autenticação
+
     # Exemplo:
     # logger.debug("Este é um debug da aplicação principal.")
     # logger.warning("Atenção: Exemplo de warning.")
 
-    print("DriveSync App - Executando...") # Pode ser substituído por logging
+    # A linha abaixo pode ser removida se a interface for puramente por logs
+    # ou se houver uma interface gráfica/web em outro lugar.
+    # print("DriveSync App - Executando...") # Esta linha pode ser redundante se tudo for logado.
+    logger.info("DriveSyncApp finalizando ou aguardando mais instruções (se aplicável).")
+
 
 if __name__ == "__main__":
     main()
