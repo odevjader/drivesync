@@ -5,8 +5,11 @@ import logging
 import os
 import sys # Importar sys
 from drivesync_app.logger_config import setup_logger
-from drivesync_app.autenticacao_drive import get_drive_service # Importar get_drive_service
-from drivesync_app.gerenciador_estado import load_state, save_state # Importar gerenciador_estado
+from drivesync_app.autenticacao_drive import get_drive_service
+from drivesync_app.gerenciador_estado import load_state, save_state
+from drivesync_app.gerenciador_drive import find_or_create_folder, list_folder_contents
+from drivesync_app.processador_arquivos import walk_local_directory
+from .sync_logic import run_sync # Main synchronization logic
 
 def main():
     """Função principal para executar o aplicativo."""
@@ -38,23 +41,104 @@ def main():
     estado_app = load_state(config)
     logger.info(f"Loaded state: {len(estado_app.get('processed_items', {}))} processed items, {len(estado_app.get('folder_mappings', {}))} folder mappings.")
 
-    # Verificar argumento --authenticate
-    if len(sys.argv) > 1 and sys.argv[1] == '--authenticate':
-        logger.info("Autenticação solicitada via argumento --authenticate.")
+    drive_service = None # Inicializar drive_service
 
-        # O config já foi lido (ou está vazio se o arquivo falhou ao carregar,
-        # get_drive_service tem sua própria lógica de fallback/erro para isso)
+    # Autenticação e obtenção do drive_service se argumentos específicos que o requerem forem passados
+    if any(arg in sys.argv for arg in ['--authenticate', '--test-drive-ops', '--sync']):
+        logger.info("Uma operação que requer autenticação do Drive foi solicitada.")
         drive_service = get_drive_service(config)
 
         if drive_service:
             logger.info("Serviço do Google Drive autenticado e obtido com sucesso.")
-            # Aqui você poderia, por exemplo, armazenar o drive_service ou usá-lo
-            # para uma operação inicial, ou apenas autenticar para futuras execuções.
         else:
             logger.error("Falha ao obter o serviço do Google Drive. Verifique os logs e a configuração.")
-    else:
-        logger.info("Nenhuma ação específica solicitada via argumentos. O aplicativo continuará normalmente se houver mais lógica.")
-        # Lógica principal do aplicativo viria aqui se não for apenas autenticação
+
+    # Lógica para --test-drive-ops
+    if "--test-drive-ops" in sys.argv:
+        if drive_service:
+            logger.info("Executando operações de teste do Drive (--test-drive-ops)...")
+
+            # Testar find_or_create_folder
+            test_folder_name = "DriveSync Test Folder"
+            logger.info(f"Tentando encontrar ou criar a pasta de teste: '{test_folder_name}' na raiz do Drive...")
+            folder_id = find_or_create_folder(drive_service, 'root', test_folder_name)
+            if folder_id:
+                logger.info(f"Pasta de teste '{test_folder_name}' encontrada/criada com ID: {folder_id}")
+            else:
+                logger.error(f"Falha ao encontrar ou criar a pasta de teste '{test_folder_name}'.")
+
+            # Testar list_folder_contents
+            logger.info("Tentando listar o conteúdo da pasta raiz ('root')...")
+            drive_contents = list_folder_contents(drive_service, 'root')
+            if drive_contents is not None: # Checa se não é None (erro na chamada)
+                if drive_contents: # Checa se o dicionário não está vazio
+                    logger.info("Conteúdo da pasta raiz (primeiros 5 itens):")
+                    count = 0
+                    for name, details in drive_contents.items():
+                        if count < 5:
+                            logger.info(f"- {name} ({details.get('mimeType', 'N/A')})")
+                            count += 1
+                        else:
+                            break
+                    if not drive_contents: # Este caso é coberto pelo if drive_contents:, mas para segurança
+                        logger.info("A pasta raiz está vazia ou nenhum conteúdo foi recuperado.")
+                else: # drive_contents é um dicionário vazio
+                    logger.info("A pasta raiz está vazia.")
+            else: # drive_contents é None
+                logger.error("Falha ao listar o conteúdo da pasta raiz.")
+        else:
+            logger.warning("Não foi possível executar as operações de teste do Drive porque o serviço do Drive não está disponível.")
+
+    # Lógica para --list-local
+    if "--list-local" in sys.argv:
+        logger.info("Listagem de arquivos locais solicitada (--list-local)...")
+        source_folder = None
+        try:
+            source_folder = config['Sync']['source_folder']
+            if not source_folder: # Check for empty string after getting it
+                logger.error("Configuração 'source_folder' em [Sync] está vazia. Defina o caminho da pasta de origem.")
+                source_folder = None # Ensure it's None if empty
+        except KeyError:
+            logger.error("Configuração 'source_folder' não encontrada na seção [Sync] do config.ini.")
+
+        if source_folder:
+            logger.info(f"Listando arquivos locais de: {source_folder}")
+            try:
+                item_count = 0
+                for item in walk_local_directory(source_folder):
+                    item_count += 1
+                    if item['type'] == 'file':
+                        logger.info(f"  Encontrado: Tipo=arquivo, Nome='{item['name']}', CaminhoRelativo='{item['path']}', Tamanho={item['size']}")
+                    else: # pasta
+                        logger.info(f"  Encontrado: Tipo=pasta, Nome='{item['name']}', CaminhoRelativo='{item['path']}'")
+                if item_count == 0:
+                    logger.info(f"Nenhum item encontrado em '{source_folder}'.")
+            except Exception as e: # Catch potential errors from walk_local_directory itself if it raises them
+                logger.error(f"Erro ao listar arquivos locais de '{source_folder}': {e}")
+        else:
+            logger.info("Listagem de arquivos locais não pode prosseguir devido à falta da configuração 'source_folder'.")
+
+    # Se nenhum argumento de ação principal foi passado
+    if not any(arg in sys.argv for arg in ['--authenticate', '--test-drive-ops', '--list-local', '--sync']):
+        logger.info("Nenhuma ação específica (--authenticate, --test-drive-ops, --list-local, --sync) solicitada. Use --help para ver as opções.")
+        # Lógica principal do aplicativo (se houver alguma padrão) viria aqui
+
+    # Lógica para --sync (deve ser após a obtenção do drive_service e carregamento do estado_app)
+    if "--sync" in sys.argv:
+        logger.info("Processo de sincronização iniciado pelo argumento --sync.")
+        if drive_service:
+            if estado_app is not None: # estado_app é carregado no início da main
+                logger.info(f"Estado antes da sincronização: {len(estado_app.get('processed_items', {}))} itens processados, {len(estado_app.get('folder_mappings', {}))} mapeamentos de pastas.")
+
+                run_sync(config, drive_service, estado_app) # estado_app é modificado in-place
+
+                logger.info("Chamada para run_sync concluída.")
+                # O estado será salvo no final da função main
+            else:
+                # Este caso não deve ocorrer se load_state sempre retorna um estado padrão
+                logger.error("Estado da aplicação não carregado. Sincronização interrompida.")
+        else:
+            logger.error("Falha ao autenticar com o Google Drive ou serviço não disponível. Sincronização interrompida.")
 
     # Exemplo:
     # logger.debug("Este é um debug da aplicação principal.")

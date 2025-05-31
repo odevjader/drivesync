@@ -10,10 +10,10 @@ DriveSync é um aplicativo Python de linha de comando projetado para sincronizar
 * **Logging Detalhado:** Geração de logs em console e arquivo para acompanhamento e depuração, com nível de log configurável.
 * **Autenticação Segura com Google Drive:** Utiliza o fluxo OAuth 2.0 para autorização segura com a API do Google Drive. Os tokens são armazenados localmente para sessões futuras.
 * **Gerenciamento de Estado:** Salva o progresso da sincronização em um arquivo (ex: `drivesync_state.json`), permitindo que o aplicativo seja interrompido e retomado de onde parou, evitando reprocessamento desnecessário de itens já sincronizados e mapeamentos de pastas.
+* **Travessia Recursiva de Arquivos:** Capacidade de percorrer recursivamente a estrutura de pastas locais e identificar ficheiros e pastas.
 
 ### Planejadas
 
-* **Travessia Recursiva de Arquivos:** Capacidade de percorrer recursivamente a estrutura de pastas locais.
 * **Espelhamento de Estrutura no Drive:** Criação automática da estrutura de pastas no Google Drive para espelhar a organização local.
 * **Upload Resumível de Arquivos:** Suporte a uploads resumíveis para arquivos grandes, garantindo a integridade em caso de interrupções.
 * **Ignorar Arquivos Já Sincronizados:** Verifica o estado para pular arquivos que já foram carregados com sucesso (comparando metadados como tamanho e data de modificação).
@@ -58,13 +58,17 @@ DriveSync é um aplicativo Python de linha de comando projetado para sincronizar
 5.  **Configure o Arquivo `config.ini`:**
     * Abra o arquivo `config.ini` na raiz do projeto.
     * Ajuste os seguintes valores conforme necessário:
-        * `client_secret_file`: Nome do arquivo JSON de credenciais do Google.
-        * `token_file`: Nome do arquivo onde os tokens OAuth serão armazenados (ex: `token_target.json`).
-        * `source_folder`: Caminho absoluto para a pasta local que você deseja sincronizar.
-        * `target_drive_folder_id`: (Opcional) ID da pasta no Google Drive onde a sincronização será feita. Se vazio, usará a raiz do Drive.
-        * `state_file`: Nome do arquivo para armazenar o estado da sincronização (ex: `drivesync_state.json`).
-        * `log_file`: Nome do arquivo de log (ex: `app.log`).
-        * `log_level`: Nível de log (DEBUG, INFO, WARNING, ERROR, CRITICAL).
+        * `client_secret_file`: (Na secção `[DriveAPI]`) Nome do arquivo JSON de credenciais do Google.
+        * `token_file`: (Na secção `[DriveAPI]`) Nome do arquivo onde os tokens OAuth serão armazenados (ex: `token_target.json`).
+        * `source_folder`: (Na secção `[Sync]`) O caminho completo para a pasta local que você deseja sincronizar. **Este valor precisa ser configurado por você.**
+        * `target_drive_folder_id`: (Na secção `[Sync]`, opcional) ID da pasta no Google Drive onde a sincronização será feita. Se vazio, usará a raiz do Drive.
+        * `state_file`: (Na secção `[Sync]`) Nome do arquivo para armazenar o estado da sincronização (ex: `drivesync_state.json`).
+        * `log_file`: (Na secção `[Logging]`) Nome do arquivo de log (ex: `app.log`).
+        * `log_level`: (Na secção `[Logging]`) Nível de log (DEBUG, INFO, WARNING, ERROR, CRITICAL).
+
+## Application State
+
+The application maintains its synchronization state in a JSON file (by default `drivesync_state.json`, configurable in `config.ini`). This file stores information critical for resuming synchronization tasks and keeping track of synced items and Drive folder structures. It's generally not recommended to edit this file manually.
 
 ## Application State
 
@@ -83,6 +87,25 @@ Para iniciar o processo de sincronização (funcionalidade futura):
 ```bash
 python -m drivesync_app.main --sync
 ```
+
+### Testando Operações do Drive
+
+Você pode testar as operações básicas do Google Drive (como criar uma pasta de teste e listar o conteúdo da raiz do seu Drive) usando o argumento `--test-drive-ops`:
+
+```bash
+python -m drivesync_app.main --test-drive-ops
+```
+Isso requer que a autenticação (um `token_target.json` válido ou executando com `--authenticate` em conjunto) já tenha sido configurada ou seja feita. O logger fornecerá feedback sobre as operações.
+
+### Listando Ficheiros Locais
+
+Para listar todos os ficheiros e pastas que seriam considerados para sincronização a partir do seu `source_folder` configurado, use o argumento `--list-local`:
+
+```bash
+python -m drivesync_app.main --list-local
+```
+Isso irá percorrer o directório especificado em `config.ini` ([Sync] -> source_folder) e imprimir os itens encontrados.
+
 
 ## Estrutura do Projeto
 
