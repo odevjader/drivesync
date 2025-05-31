@@ -1,10 +1,8 @@
 import logging
 from pathlib import Path
-
-# Assuming other necessary modules will be imported as needed, e.g.:
-# from . import processador_arquivos
-# from . import gerenciador_drive
-# from . import gerenciador_estado
+from . import processador_arquivos
+from . import gerenciador_drive
+# from . import gerenciador_estado # State is passed in, direct use might be minimal
 
 logger = logging.getLogger(__name__)
 
@@ -59,47 +57,53 @@ def run_sync(config, drive_service, app_state):
         logger.warning("'processed_items' not found in app_state, initializing.")
         app_state['processed_items'] = {}
 
-    # Placeholder for the actual sync logic using walk_local_directory, find_or_create_folder, etc.
-    # This will be filled in detail in a later step.
-    # For now, just log that this part would run.
+    local_to_drive_parent_map = {'.': target_drive_folder_id}
 
-    logger.info("Simulating walking local directory and processing items (actual logic pending)...")
-    # Example of how it might start:
-    #
-    # from . import processador_arquivos # Import here or at top if definitely used
-    # from . import gerenciador_drive   # Import here or at top
-    #
-    # local_to_drive_parent_map = {'.': target_drive_folder_id} # Maps relative local path to its Drive parent ID
-    #
-    # for item in processador_arquivos.walk_local_directory(source_folder_str):
-    #     relative_item_path = item['path']
-    #     item_name = item['name']
-    #
-    #     # Determine parent Drive ID for the current item
-    #     parent_relative_path = str(Path(relative_item_path).parent)
-    #     drive_parent_id = local_to_drive_parent_map.get(parent_relative_path)
-    #
-    #     if drive_parent_id is None:
-    #         logger.error(f"Could not determine Drive parent ID for local item: {relative_item_path}. Skipping.")
-    #         continue # Or handle more gracefully
-    #
-    #     if item['type'] == 'folder':
-    #         logger.debug(f"Processing local folder: '{relative_item_path}'")
-    #         # ... logic for folders: find_or_create_folder, update local_to_drive_parent_map and app_state['folder_mappings'] ...
-    #         # drive_folder_id = gerenciador_drive.find_or_create_folder(drive_service, drive_parent_id, item_name)
-    #         # if drive_folder_id:
-    #         #    app_state['folder_mappings'][relative_item_path] = drive_folder_id
-    #         #    local_to_drive_parent_map[relative_item_path] = drive_folder_id
-    #         # else:
-    #         #    logger.error(f"Failed to find or create Drive folder for: {relative_item_path}. Items under this folder will be skipped.")
-    #         pass
-    #     elif item['type'] == 'file':
-    #         logger.debug(f"Processing local file: '{relative_item_path}'")
-    #         # ... logic for files: check processed_items, upload if new/changed, update processed_items ...
-    #         pass
+    logger.info(f"Starting processing of local directory: {source_folder_str}")
+    for item in processador_arquivos.walk_local_directory(source_folder_str):
+        relative_item_path = item['path']
+        item_name = item['name']
+        parent_relative_path = str(Path(relative_item_path).parent)
+        drive_parent_id = local_to_drive_parent_map.get(parent_relative_path)
 
-    # Final save of state will be handled by main.py after this function returns.
-    # However, for robustness, app_state could be saved periodically within long loops,
-    # especially after critical updates like folder creation.
+        if drive_parent_id is None:
+            logger.error(f"Parent Drive ID for '{relative_item_path}' (local parent: '{parent_relative_path}') not found. Skipping item. This may occur if parent folder processing failed.")
+            continue
 
-    logger.info("Synchronization process run_sync function call completed (simulated for now).")
+        if item['type'] == 'folder':
+            logger.info(f"Processing folder: '{relative_item_path}' (Local Name: '{item_name}')")
+            drive_folder_id = None
+            if relative_item_path in app_state['folder_mappings']:
+                drive_folder_id = app_state['folder_mappings'][relative_item_path]
+                logger.info(f"Folder mapping already exists for '{relative_item_path}'. Drive ID: '{drive_folder_id}'")
+            else:
+                logger.info(f"Attempting to find or create Drive folder for '{item_name}' in parent Drive ID '{drive_parent_id}'")
+                drive_folder_id = gerenciador_drive.find_or_create_folder(drive_service, drive_parent_id, item_name)
+
+            if drive_folder_id:
+                if relative_item_path not in app_state['folder_mappings']:
+                    app_state['folder_mappings'][relative_item_path] = drive_folder_id
+                    logger.info(f"New folder mapping added: Local '{relative_item_path}' -> Drive ID '{drive_folder_id}'")
+                local_to_drive_parent_map[relative_item_path] = drive_folder_id
+                logger.debug(f"Updated local_to_drive_parent_map: '{relative_item_path}' -> '{drive_folder_id}'")
+            else:
+                logger.error(f"Failed to find or create Drive folder for '{relative_item_path}' (Name: '{item_name}'). Items under this folder may be skipped or affected.")
+
+        elif item['type'] == 'file':
+            logger.info(f"Processing file: '{relative_item_path}' (Local Name: '{item_name}')")
+            if relative_item_path in app_state['processed_items']:
+                logger.info(f"File '{relative_item_path}' already in processed_items. Skipping for this phase.")
+                continue
+
+            local_full_path = item['full_path']
+            logger.info(f"Attempting to upload file '{local_full_path}' to Drive parent ID '{drive_parent_id}' as '{item_name}'")
+            drive_file_id = gerenciador_drive.upload_basic_file(drive_service, local_full_path, item_name, drive_parent_id)
+
+            if drive_file_id:
+                logger.info(f"Successfully uploaded file '{relative_item_path}'. Drive File ID: '{drive_file_id}'")
+                # Task 8 will handle adding to app_state['processed_items']
+            else:
+                logger.error(f"Failed to upload file '{relative_item_path}'.")
+
+    logger.info(f"Completed processing loop for source folder: {source_folder_str}.")
+    logger.info("Synchronization process run_sync function call completed.")

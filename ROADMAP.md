@@ -43,7 +43,8 @@ Este documento detalha o plano de desenvolvimento para o projeto DriveSync, incl
 
 ## Próximas Tarefas (para Jules)
 
-### 📋 Tarefa 6: Lógica Principal de Sincronização - Fase 1 (Sincronização de Pastas e Upload Básico de Ficheiros)
+### ✅ Tarefa 6: Lógica Principal de Sincronização - Fase 1 (Sincronização de Pastas e Upload Básico de Ficheiros)
+* **Status:** ✅ **Concluído**
 * **Branch Sugerida:** `feature/sync-logic-phase1`
 * **Prompt para Jules (Inglês):**
     ```
