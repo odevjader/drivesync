@@ -21,46 +21,17 @@ Este documento detalha o plano de desenvolvimento para o projeto DriveSync, incl
 * **Resumo:** Implementado o fluxo de autenticação OAuth 2.0 em `drivesync_app/autenticacao_drive.py` usando as bibliotecas da API do Google. `main.py` atualizado para acionar a autenticação via argumento CLI (`--authenticate`) e `requirements.txt` atualizado. `config.ini` atualizado para `token_target.json`.
 * **Ficheiros Modificados:** `drivesync_app/autenticacao_drive.py`, `drivesync_app/main.py`, `requirements.txt`, `config.ini`.
 
+### ✅ Tarefa 3: Módulo de Gerenciamento de Estado
+* **Status:** ✅ **Concluído**
+* **Branch:** `feature/state-management`
+* **Resumo:** Implementado o módulo de gerenciamento de estado em `drivesync_app/gerenciador_estado.py` com funções `load_state` e `save_state` para carregar e salvar o estado da aplicação (e.g., `drivesync_state.json`). Inclui escrita atómica para `save_state` e tratamento de erros. `main.py` atualizado para usar estas funções e `config.ini` atualizado com a chave `state_file`.
+* **Ficheiros Modificados:** `drivesync_app/gerenciador_estado.py`, `drivesync_app/main.py`, `config.ini`.
+
 ---
 
 ## Próximas Tarefas (para Jules)
 
-### 📋 Tarefa 3: Módulo de Gerenciamento de Estado
-* **Branch Sugerida:** `feature/state-management`
-* **Prompt para Jules (Inglês):**
-    ```
-    Create a state management module in `drivesync_app/gerenciador_estado.py`.
-    This module will be responsible for loading and saving the application's synchronization state to a JSON file. The path to this state file should be retrieved from the `state_file` key within the `[Sync]` section of the `config.ini` file (use the existing configuration loading mechanism).
-
-    Implement the following functions within `drivesync_app/gerenciador_estado.py`:
-
-    1.  `load_state(config)`:
-        * Accepts the application's loaded configuration object as an argument.
-        * Reads the `state_file` path from the `config` object.
-        * Attempts to load and parse the JSON data from this file.
-        * If the `state_file` does not exist, it should log an informational message and return a default empty state structure. This default structure should be: `{"processed_items": {}, "folder_mappings": {}}`.
-        * If the file exists but is empty or contains invalid JSON, it should log an error message, and return the same default empty state structure. Handle potential `FileNotFoundError` and `json.JSONDecodeError` exceptions gracefully.
-        * If the file is loaded successfully, return the parsed Python dictionary.
-
-    2.  `save_state(config, state_data)`:
-        * Accepts the application's loaded configuration object and the `state_data` (Python dictionary) to be saved.
-        * Reads the `state_file` path from the `config` object.
-        * Saves the `state_data` dictionary to the specified `state_file` as a JSON string.
-        * The JSON should be saved with an indent for readability (e.g., `json.dump(state_data, f, indent=4)`).
-        * Implement an atomic write to prevent data corruption. This means writing to a temporary file first, and then renaming the temporary file to the actual `state_file` path. For example, save to `state_file.tmp` and then rename `state_file.tmp` to `state_file`. Ensure the original file is overwritten if it exists.
-        * Log a success message upon saving or an error message if an exception occurs during file operations.
-
-    Modify `drivesync_app/main.py`:
-    * Import the `load_state` and `save_state` functions from `drivesync_app.gerenciador_estado`.
-    * After loading the configuration and setting up the logger, call `load_state(config)` to load the application state. Log the loaded state (or a summary, e.g., number of processed items) for debugging purposes.
-    * (For testing purposes in this task) Before the application finishes, call `save_state(config, loaded_state)` to save the state back (even if it hasn't changed significantly yet). This is to ensure the save mechanism works.
-    ```
-* **Ficheiros a Modificar:** `drivesync_app/gerenciador_estado.py`, `drivesync_app/main.py`.
-* **Considerações:** Importância da escrita atómica e tratamento de erros ao carregar/salvar JSON.
-
----
-
-### 📋 Tarefa 4: Operações Principais do Drive (Criação de Pastas e Listagem de Ficheiros)
+### ⏳ Tarefa 4: Operações Principais do Drive (Criação de Pastas e Listagem de Ficheiros)
 * **Branch Sugerida:** `feature/drive-core-operations`
 * **Prompt para Jules (Inglês):**
     ```
