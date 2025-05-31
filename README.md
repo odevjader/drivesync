@@ -126,4 +126,4 @@ Isso irá percorrer o directório especificado em `config.ini` ([Sync] -> source
 
 ## Roteiro (Roadmap)
 
-Veja o arquivo `ROADMAP.md` (ou a seção abaixo, se preferir manter aqui) para o detalhamento das próximas etapas de desenvolvimento e tarefas planejadas para o agente de codificação Jules.
+Veja o arquivo `ROADMAP.md` 
