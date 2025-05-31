@@ -5,11 +5,13 @@ DriveSync é um aplicativo Python de linha de comando projetado para sincronizar
 ## Funcionalidades
 
 ### Implementadas / Em Andamento
+
 * **Configuração Centralizada:** Fácil configuração através de um arquivo `config.ini` para caminhos, credenciais e outras definições.
 * **Logging Detalhado:** Geração de logs em console e arquivo para acompanhamento e depuração, com nível de log configurável.
 * **Autenticação Segura com Google Drive:** Utiliza o fluxo OAuth 2.0 para autorização segura com a API do Google Drive. Os tokens são armazenados localmente para sessões futuras.
 
 ### Planejadas
+
 * **Gerenciamento de Estado:** Salva o progresso da sincronização, permitindo que o aplicativo seja interrompido e retomado de onde parou, evitando reprocessamento desnecessário.
 * **Travessia Recursiva de Arquivos:** Capacidade de percorrer recursivamente a estrutura de pastas locais.
 * **Espelhamento de Estrutura no Drive:** Criação automática da estrutura de pastas no Google Drive para espelhar a organização local.
@@ -71,3 +73,30 @@ DriveSync é um aplicativo Python de linha de comando projetado para sincronizar
 Para autenticar o aplicativo com o Google Drive (necessário na primeira execução ou se o token expirar):
 ```bash
 python -m drivesync_app.main --authenticate
+```
+
+Para iniciar o processo de sincronização (funcionalidade futura):
+```bash
+python -m drivesync_app.main --sync
+```
+
+## Estrutura do Projeto
+
+* `drivesync/` (Pasta raiz do projeto)
+    * `drivesync_app/`: Contém o código fonte principal do aplicativo.
+        * `main.py`: Ponto de entrada do aplicativo.
+        * `autenticacao_drive.py`: Lida com a autenticação OAuth 2.0.
+        * `logger_config.py`: Configuração do sistema de logging.
+        * `gerenciador_estado.py`: Gerencia o estado da sincronização.
+        * `gerenciador_drive.py`: Interage com a API do Google Drive.
+        * `processador_arquivos.py`: Processa arquivos e pastas locais.
+        * `verificador.py`: Verifica a sincronização.
+        * `__init__.py`: Define `drivesync_app` como um pacote Python.
+    * `config.ini`: Arquivo de configuração.
+    * `requirements.txt`: Lista de dependências Python.
+    * `.gitignore`: Especifica arquivos ignorados pelo Git.
+    * `README.md`: Este arquivo.
+
+## Roteiro (Roadmap)
+
+Veja o arquivo `ROADMAP.md` (ou a seção abaixo, se preferir manter aqui) para o detalhamento das próximas etapas de desenvolvimento e tarefas planejadas para o agente de codificação Jules.
