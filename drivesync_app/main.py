@@ -6,6 +6,7 @@ import os
 import sys # Importar sys
 from drivesync_app.logger_config import setup_logger
 from drivesync_app.autenticacao_drive import get_drive_service # Importar get_drive_service
+from drivesync_app.gerenciador_estado import load_state, save_state # Importar gerenciador_estado
 
 def main():
     """Função principal para executar o aplicativo."""
@@ -33,6 +34,10 @@ def main():
     logger = logging.getLogger(__name__) # Logger para main.py
     logger.info("DriveSyncApp iniciado. Logger configurado.")
 
+    # Carregar o estado da aplicação
+    estado_app = load_state(config)
+    logger.info(f"Loaded state: {len(estado_app.get('processed_items', {}))} processed items, {len(estado_app.get('folder_mappings', {}))} folder mappings.")
+
     # Verificar argumento --authenticate
     if len(sys.argv) > 1 and sys.argv[1] == '--authenticate':
         logger.info("Autenticação solicitada via argumento --authenticate.")
@@ -58,6 +63,16 @@ def main():
     # A linha abaixo pode ser removida se a interface for puramente por logs
     # ou se houver uma interface gráfica/web em outro lugar.
     # print("DriveSync App - Executando...") # Esta linha pode ser redundante se tudo for logado.
+
+    # Salvar o estado da aplicação antes de finalizar
+    if estado_app is not None: # Assegurar que estado_app foi definido
+        if save_state(config, estado_app):
+            logger.info("Estado da aplicação salvo com sucesso.")
+        else:
+            logger.error("Falha ao salvar o estado da aplicação.")
+    else:
+        logger.warning("Variável de estado não definida, não foi possível salvar o estado.")
+
     logger.info("DriveSyncApp finalizando ou aguardando mais instruções (se aplicável).")
 
 
