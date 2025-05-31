@@ -33,35 +33,15 @@ Este documento detalha o plano de desenvolvimento para o projeto DriveSync, incl
 * **Resumo:** Implementado `find_or_create_folder` e `list_folder_contents` em `drivesync_app/gerenciador_drive.py`. Adicionado `--test-drive-ops` para `main.py` para testar estas interações com o Drive. Inclui tratamento básico de erros e paginação para listagem.
 * **Ficheiros Modificados:** `drivesync_app/gerenciador_drive.py`, `drivesync_app/main.py`.
 
+### ✅ Tarefa 5: Módulo Processador de Ficheiros (Travessia de Ficheiros Locais)
+* **Status:** ✅ **Concluído**
+* **Branch:** `feature/local-file-processor`
+* **Resumo:** Implementado `walk_local_directory` em `drivesync_app/processador_arquivos.py` para travessia de sistema de ficheiros local, usando `os.walk` e `pathlib`. Adicionado argumento `--list-local` a `main.py` para testar esta funcionalidade, lendo `source_folder` de `config.ini`.
+* **Ficheiros Modificados:** `drivesync_app/processador_arquivos.py`, `drivesync_app/main.py`, `config.ini`.
+
 ---
 
 ## Próximas Tarefas (para Jules)
-
-### ⏳ Tarefa 5: Módulo Processador de Ficheiros (Travessia de Ficheiros Locais)
-* **Branch Sugerida:** `feature/local-file-processor`
-* **Prompt para Jules (Inglês):**
-    ```
-    Implement a module `drivesync_app/processador_arquivos.py` to handle local file system traversal.
-
-    Create a function `walk_local_directory(local_folder_path)`:
-    * Accepts the `local_folder_path` (to be read from `config.ini` eventually, but can be hardcoded for initial testing or passed as an argument).
-    * Uses `os.walk()` to recursively traverse the given directory.
-    * For each directory found, it should yield a dictionary containing: `{'type': 'folder', 'path': 'relative_path_to_folder', 'name': 'folder_name'}`. The path should be relative to the initial `local_folder_path`.
-    * For each file found, it should yield a dictionary containing: `{'type': 'file', 'path': 'relative_path_to_file', 'name': 'file_name', 'full_path': 'absolute_path_to_file', 'size': file_size_in_bytes, 'modified_time': last_modified_timestamp}`. The path should be relative.
-    * Log errors if any directory or file cannot be accessed (e.g., permission errors).
-    * Ensure paths are handled correctly across different operating systems (consider using `pathlib`).
-
-    Modify `drivesync_app/main.py`:
-    * Add a new command-line argument, e.g., `--list-local`.
-    * If this argument is provided:
-        * Read the `source_folder` path from `config.ini`.
-        * Call `walk_local_directory` with this path.
-        * Iterate through the yielded items and log their details (type, relative path, name).
-    ```
-* **Ficheiros a Modificar:** `drivesync_app/processador_arquivos.py`, `drivesync_app/main.py`.
-* **Considerações:** Uso de `os.walk()`, cálculo de caminhos relativos, e tratamento de erros de permissão. `pathlib` é recomendado para manipulação de caminhos.
-
----
 
 ### 📋 Tarefa 6: Lógica Principal de Sincronização - Fase 1 (Sincronização de Pastas e Upload Básico de Ficheiros)
 * **Branch Sugerida:** `feature/sync-logic-phase1`

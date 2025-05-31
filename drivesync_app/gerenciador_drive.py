@@ -1,5 +1,7 @@
 import logging
+import mimetypes # For guessing MIME types
 from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaFileUpload # For file uploads
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
@@ -108,4 +110,58 @@ def list_folder_contents(drive_service, folder_id):
         return None
     except Exception as e:
         logger.error(f"An unexpected error occurred in list_folder_contents for folder ID '{folder_id}': {e}")
+        return None
+
+
+def upload_basic_file(drive_service, local_file_path, file_name, parent_drive_folder_id, mime_type=None):
+    """
+    Uploads a file to Google Drive with basic, non-resumable upload.
+
+    Args:
+        drive_service: Authorized Google Drive service instance.
+        local_file_path (str): Absolute path to the local file to upload.
+        file_name (str): Name of the file as it should appear on Drive.
+        parent_drive_folder_id (str): ID of the Drive folder to upload into.
+        mime_type (str, optional): Mime type of the file. If None, it's guessed.
+
+    Returns:
+        str: The Google Drive file ID if successful, None otherwise.
+    """
+    try:
+        if mime_type is None:
+            mime_type = mimetypes.guess_type(local_file_path)[0]
+            if mime_type is None: # Fallback if guess fails
+                mime_type = 'application/octet-stream'
+            logger.debug(f"Guessed MIME type for '{local_file_path}' as '{mime_type}'.")
+
+        file_metadata = {
+            'name': file_name,
+            'parents': [parent_drive_folder_id]
+        }
+
+        media = MediaFileUpload(local_file_path,
+                                mimetype=mime_type,
+                                resumable=False) # Basic upload for this task
+
+        logger.info(f"Uploading '{file_name}' (local: {local_file_path}) to Drive folder '{parent_drive_folder_id}'...")
+        file = drive_service.files().create(body=file_metadata,
+                                            media_body=media,
+                                            fields='id').execute()
+
+        drive_file_id = file.get('id')
+        if drive_file_id:
+            logger.info(f"File '{file_name}' (local: {local_file_path}) uploaded successfully to Drive folder '{parent_drive_folder_id}' with ID: {drive_file_id}")
+            return drive_file_id
+        else:
+            logger.error(f"File '{file_name}' upload failed, no ID returned. Local path: {local_file_path}")
+            return None
+
+    except HttpError as error:
+        logger.error(f"An API error occurred while uploading file '{file_name}': {error}. Local path: {local_file_path}")
+        return None
+    except FileNotFoundError:
+        logger.error(f"Local file not found for upload: {local_file_path}. File name: '{file_name}'")
+        return None
+    except Exception as e:
+        logger.error(f"An unexpected error occurred uploading file '{file_name}': {e}. Local path: {local_file_path}")
         return None

@@ -8,7 +8,8 @@ from drivesync_app.logger_config import setup_logger
 from drivesync_app.autenticacao_drive import get_drive_service
 from drivesync_app.gerenciador_estado import load_state, save_state
 from drivesync_app.gerenciador_drive import find_or_create_folder, list_folder_contents
-from drivesync_app.processador_arquivos import walk_local_directory # Local file processing
+from drivesync_app.processador_arquivos import walk_local_directory
+from .sync_logic import run_sync # Main synchronization logic
 
 def main():
     """Função principal para executar o aplicativo."""
@@ -42,9 +43,9 @@ def main():
 
     drive_service = None # Inicializar drive_service
 
-    # Autenticação e obtenção do drive_service se argumentos específicos forem passados
-    if any(arg in sys.argv for arg in ['--authenticate', '--test-drive-ops']):
-        logger.info("Autenticação ou operações de teste do Drive solicitadas.")
+    # Autenticação e obtenção do drive_service se argumentos específicos que o requerem forem passados
+    if any(arg in sys.argv for arg in ['--authenticate', '--test-drive-ops', '--sync']):
+        logger.info("Uma operação que requer autenticação do Drive foi solicitada.")
         drive_service = get_drive_service(config)
 
         if drive_service:
@@ -118,9 +119,26 @@ def main():
             logger.info("Listagem de arquivos locais não pode prosseguir devido à falta da configuração 'source_folder'.")
 
     # Se nenhum argumento de ação principal foi passado
-    if not any(arg in sys.argv for arg in ['--authenticate', '--test-drive-ops', '--list-local']):
-        logger.info("Nenhuma ação específica (--authenticate, --test-drive-ops, --list-local) solicitada. Use --help para ver as opções.")
+    if not any(arg in sys.argv for arg in ['--authenticate', '--test-drive-ops', '--list-local', '--sync']):
+        logger.info("Nenhuma ação específica (--authenticate, --test-drive-ops, --list-local, --sync) solicitada. Use --help para ver as opções.")
         # Lógica principal do aplicativo (se houver alguma padrão) viria aqui
+
+    # Lógica para --sync (deve ser após a obtenção do drive_service e carregamento do estado_app)
+    if "--sync" in sys.argv:
+        logger.info("Processo de sincronização iniciado pelo argumento --sync.")
+        if drive_service:
+            if estado_app is not None: # estado_app é carregado no início da main
+                logger.info(f"Estado antes da sincronização: {len(estado_app.get('processed_items', {}))} itens processados, {len(estado_app.get('folder_mappings', {}))} mapeamentos de pastas.")
+
+                run_sync(config, drive_service, estado_app) # estado_app é modificado in-place
+
+                logger.info("Chamada para run_sync concluída.")
+                # O estado será salvo no final da função main
+            else:
+                # Este caso não deve ocorrer se load_state sempre retorna um estado padrão
+                logger.error("Estado da aplicação não carregado. Sincronização interrompida.")
+        else:
+            logger.error("Falha ao autenticar com o Google Drive ou serviço não disponível. Sincronização interrompida.")
 
     # Exemplo:
     # logger.debug("Este é um debug da aplicação principal.")
