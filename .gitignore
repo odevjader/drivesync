@@ -135,3 +135,6 @@ app.log # Arquivo de log específico do aplicativo
 
 # VSCode
 .vscode/
+
+#logfile
+app.log
