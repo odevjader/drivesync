@@ -2,15 +2,3 @@
 2025-05-31 12:53:16,728 - __main__ - INFO - DriveSyncApp iniciado. Logger configurado.
 2025-05-31 12:53:37,150 - root - INFO - Logger configured: File output to app.log, Level: INFO
 2025-05-31 12:53:37,150 - __main__ - INFO - DriveSyncApp iniciado. Logger configurado.
-2025-05-31 12:57:13,021 - root - INFO - Logger configured: File output to app.log, Level: INFO
-2025-05-31 12:57:13,021 - __main__ - INFO - DriveSyncApp iniciado. Logger configurado.
-2025-05-31 12:57:13,021 - __main__ - INFO - Autenticação solicitada via argumento --authenticate.
-2025-05-31 12:57:13,021 - drivesync_app.autenticacao_drive - INFO - Caminho do arquivo de token: /app/token_target.pickle
-2025-05-31 12:57:13,022 - drivesync_app.autenticacao_drive - INFO - Caminho do arquivo de client_secret: /app/credentials_target.json
-2025-05-31 12:57:13,022 - drivesync_app.autenticacao_drive - ERROR - Arquivo client_secret não encontrado em: /app/credentials_target.json
-2025-05-31 12:57:13,022 - __main__ - ERROR - Falha ao obter o serviço do Google Drive. Verifique os logs e a configuração.
-2025-05-31 12:57:13,022 - __main__ - INFO - DriveSyncApp finalizando ou aguardando mais instruções (se aplicável).
-2025-05-31 12:57:20,333 - root - INFO - Logger configured: File output to app.log, Level: INFO
-2025-05-31 12:57:20,333 - __main__ - INFO - DriveSyncApp iniciado. Logger configurado.
-2025-05-31 12:57:20,333 - __main__ - INFO - Nenhuma ação específica solicitada via argumentos. O aplicativo continuará normalmente se houver mais lógica.
-2025-05-31 12:57:20,333 - __main__ - INFO - DriveSyncApp finalizando ou aguardando mais instruções (se aplicável).
