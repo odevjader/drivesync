@@ -93,18 +93,18 @@ def verify_sync(config, drive_service, db_connection, logger_instance):
                     drive_size_str = drive_file_metadata.get('size')
                     if drive_size_str is not None:
                         try:
-                                drive_size_int = int(drive_size_str) # Drive API returns size as string
-                                if local_size == drive_size_int:
-                                    logger.info(f"File '{relative_path}' (Drive ID: {drive_id}): Local size ({local_size}) matches Drive size ({drive_size_int}). OK.")
-                                else:
-                                    logger.warning(f"File '{relative_path}' (Drive ID: {drive_id}): SIZE MISMATCH. Local: {local_size}, Drive: {drive_size_int}.")
-                                    mismatch_files_count += 1
-                            except ValueError:
-                                logger.error(f"File '{relative_path}' (Drive ID: {drive_id}): Could not convert Drive size '{drive_size_str}' to integer.")
+                            drive_size_int = int(drive_size_str) # Drive API returns size as string
+                            if local_size == drive_size_int:
+                                logger.info(f"File '{relative_path}' (Drive ID: {drive_id}): Local size ({local_size}) matches Drive size ({drive_size_int}). OK.")
+                            else:
+                                logger.warning(f"File '{relative_path}' (Drive ID: {drive_id}): SIZE MISMATCH. Local: {local_size}, Drive: {drive_size_int}.")
                                 mismatch_files_count += 1
-                        else:
-                            # This case is unusual for regular files on Drive, might indicate a Google Doc or folder
-                            # Google Docs, Sheets, Slides etc., do not have a 'size' field in the same way.
+                        except ValueError:
+                            logger.error(f"File '{relative_path}' (Drive ID: {drive_id}): Could not convert Drive size '{drive_size_str}' to integer.")
+                            mismatch_files_count += 1
+                    else:
+                        # This case is unusual for regular files on Drive, might indicate a Google Doc or folder
+                        # Google Docs, Sheets, Slides etc., do not have a 'size' field in the same way.
                             # Their mimeType would be 'application/vnd.google-apps.document', etc.
                             # For this verification, we assume files being synced are expected to have a byte size.
                             logger.warning(f"File '{relative_path}' (Drive ID: {drive_id}): No size information returned from Drive. (Is it a Google Workspace document type?). Local size: {local_size}.")
