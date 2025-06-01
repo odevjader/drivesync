@@ -1,5 +1,6 @@
 import logging
 import mimetypes # For guessing MIME types
+import time # For sleep in retry logic
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload # For file uploads
 
@@ -113,9 +114,9 @@ def list_folder_contents(drive_service, folder_id):
         return None
 
 
-def upload_basic_file(drive_service, local_file_path, file_name, parent_drive_folder_id, mime_type=None):
+def upload_file(drive_service, local_file_path, file_name, parent_drive_folder_id, mime_type=None):
     """
-    Uploads a file to Google Drive with basic, non-resumable upload.
+    Uploads a file to Google Drive with resumable uploads and retry logic.
 
     Args:
         drive_service: Authorized Google Drive service instance.
@@ -127,41 +128,69 @@ def upload_basic_file(drive_service, local_file_path, file_name, parent_drive_fo
     Returns:
         str: The Google Drive file ID if successful, None otherwise.
     """
+    if mime_type is None:
+        mime_type = mimetypes.guess_type(local_file_path)[0]
+        if mime_type is None:  # Fallback if guess fails
+            mime_type = 'application/octet-stream'
+        logger.debug(f"Guessed MIME type for '{local_file_path}' as '{mime_type}'.")
+
     try:
-        if mime_type is None:
-            mime_type = mimetypes.guess_type(local_file_path)[0]
-            if mime_type is None: # Fallback if guess fails
-                mime_type = 'application/octet-stream'
-            logger.debug(f"Guessed MIME type for '{local_file_path}' as '{mime_type}'.")
-
-        file_metadata = {
-            'name': file_name,
-            'parents': [parent_drive_folder_id]
-        }
-
         media = MediaFileUpload(local_file_path,
                                 mimetype=mime_type,
-                                resumable=False) # Basic upload for this task
-
-        logger.info(f"Uploading '{file_name}' (local: {local_file_path}) to Drive folder '{parent_drive_folder_id}'...")
-        file = drive_service.files().create(body=file_metadata,
-                                            media_body=media,
-                                            fields='id').execute()
-
-        drive_file_id = file.get('id')
-        if drive_file_id:
-            logger.info(f"File '{file_name}' (local: {local_file_path}) uploaded successfully to Drive folder '{parent_drive_folder_id}' with ID: {drive_file_id}")
-            return drive_file_id
-        else:
-            logger.error(f"File '{file_name}' upload failed, no ID returned. Local path: {local_file_path}")
-            return None
-
-    except HttpError as error:
-        logger.error(f"An API error occurred while uploading file '{file_name}': {error}. Local path: {local_file_path}")
-        return None
+                                resumable=True,
+                                chunksize=1024 * 1024)  # 1MB chunk size
     except FileNotFoundError:
         logger.error(f"Local file not found for upload: {local_file_path}. File name: '{file_name}'")
         return None
-    except Exception as e:
-        logger.error(f"An unexpected error occurred uploading file '{file_name}': {e}. Local path: {local_file_path}")
+    except Exception as e: # Catch other potential errors during MediaFileUpload initialization
+        logger.error(f"Error initializing MediaFileUpload for '{local_file_path}': {e}")
         return None
+
+    file_metadata = {
+        'name': file_name,
+        'parents': [parent_drive_folder_id]
+    }
+
+    request = drive_service.files().create(body=file_metadata,
+                                           media_body=media,
+                                           fields='id')
+
+    response = None
+    retry_count = 0
+    max_retries = 5
+    delay = 1  # Initial delay in seconds for exponential backoff
+
+    logger.info(f"Starting resumable upload for '{file_name}' (local: {local_file_path}) to Drive folder '{parent_drive_folder_id}'.")
+
+    while True:
+        try:
+            status, response = request.next_chunk()
+            if status:
+                logger.info(f"Uploaded {int(status.progress() * 100)}% for file {file_name}")
+            if response:
+                drive_file_id = response.get('id')
+                logger.info(f"File '{file_name}' uploaded successfully with ID: {drive_file_id}")
+                return drive_file_id
+            # If status is None and response is None, it might indicate completion in some scenarios,
+            # but the google-api-python-client typically provides a response object when done.
+            # The loop breaks when response is not None.
+
+        except HttpError as error:
+            logger.error(f"HttpError {error.resp.status} occurred during upload of {file_name}: {error}")
+            if error.resp.status in [500, 502, 503, 504]:  # Transient errors
+                retry_count += 1
+                if retry_count <= max_retries:
+                    logger.warning(f"Retrying upload for {file_name} (attempt {retry_count}/{max_retries}) in {delay} seconds...")
+                    time.sleep(delay)
+                    delay *= 2  # Exponential backoff
+                    continue
+                else:
+                    logger.error(f"Max retries exceeded for {file_name}. Upload failed.")
+                    return None
+            else:  # Non-transient error
+                logger.error(f"Non-retriable error for {file_name}. Upload failed.")
+                return None
+        except Exception as e:
+            logger.error(f"An unexpected error occurred during upload of {file_name}: {e}")
+            return None
+    return None # Should be unreachable if loop logic is correct, but as a fallback.

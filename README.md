@@ -11,7 +11,7 @@ DriveSync é um aplicativo Python de linha de comando projetado para sincronizar
 * **Autenticação Segura com Google Drive:** Utiliza o fluxo OAuth 2.0 para autorização segura com a API do Google Drive. Os tokens são armazenados localmente para sessões futuras.
 * **Gerenciamento de Estado:** Salva o progresso da sincronização em um arquivo (ex: `drivesync_state.json`), permitindo que o aplicativo seja interrompido e retomado de onde parou, evitando reprocessamento desnecessário de itens já sincronizados e mapeamentos de pastas.
 * **Travessia Recursiva de Arquivos:** Capacidade de percorrer recursivamente a estrutura de pastas locais e identificar ficheiros e pastas.
-* **Sincronização Inicial:** Sincronização da estrutura de pastas locais e upload básico de arquivos para o Google Drive, criando uma réplica inicial do conteúdo local no Drive.
+* **Sincronização Inicial:** Sincronização da estrutura de pastas locais e upload resumível de arquivos para o Google Drive, com tratamento de erros e retentativas para maior confiabilidade.
 
 ### Planejadas
 

@@ -97,7 +97,8 @@ def run_sync(config, drive_service, app_state):
 
             local_full_path = item['full_path']
             logger.info(f"Attempting to upload file '{local_full_path}' to Drive parent ID '{drive_parent_id}' as '{item_name}'")
-            drive_file_id = gerenciador_drive.upload_basic_file(drive_service, local_full_path, item_name, drive_parent_id)
+            # Use the new resumable upload function
+            drive_file_id = gerenciador_drive.upload_file(drive_service, local_full_path, item_name, drive_parent_id)
 
             if drive_file_id:
                 logger.info(f"Successfully uploaded file '{relative_item_path}'. Drive File ID: '{drive_file_id}'")

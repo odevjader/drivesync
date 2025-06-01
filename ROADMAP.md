@@ -75,7 +75,8 @@ Este documento detalha o plano de desenvolvimento para o projeto DriveSync, incl
 
 ---
 
-### 📋 Tarefa 7: Uploads Resumíveis e Tratamento Avançado de Erros para Ficheiros
+### ✅ Tarefa 7: Uploads Resumíveis e Tratamento Avançado de Erros para Ficheiros
+* **Status:** ✅ **Concluído**
 * **Branch Sugerida:** `feature/resumable-uploads`
 * **Prompt para Jules (Inglês):**
     ```
