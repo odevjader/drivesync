@@ -75,8 +75,9 @@ Este documento detalha o plano de desenvolvimento para o projeto DriveSync, incl
 
 Com a v1.0 estabelecida, focaremos em robustez e usabilidade para grandes volumes de dados.
 
-### 📋 Tarefa P1: Refatorar Gerenciamento de Estado para Usar SQLite
-* **Status:** 📋 **Planejado**
+### ✅ Tarefa P1: Refatorar Gerenciamento de Estado para Usar SQLite
+* **Status:** ✅ **Concluído**
+* **Resumo:** Refatorado o `gerenciador_estado.py` para usar SQLite (`drivesync_state.db`) em vez de JSON. Isso incluiu a atualização de `main.py`, `sync_logic.py` e `verificador.py` para interagir com o banco de dados SQLite. O arquivo `config.ini` foi atualizado para o novo nome do arquivo de estado.
 * **Objetivo:** Substituir o atual sistema de gerenciamento de estado baseado em JSON por um banco de dados SQLite para melhorar a performance, escalabilidade e robustez no manuseio de dezenas de milhares de arquivos.
 * **Prompt para Jules (Inglês):**
     ```
@@ -108,8 +109,8 @@ Com a v1.0 estabelecida, focaremos em robustez e usabilidade para grandes volume
 
 ---
 
-### 📋 Tarefa P2: Implementar Tratamento Avançado de Erros e Retentativas para API do Drive
-* **Status:** 📋 **Planejado**
+### ⏳ Tarefa P2: Implementar Tratamento Avançado de Erros e Retentativas para API do Drive
+* **Status:** ⏳ **Em Andamento / Próxima Tarefa**
 * **Objetivo:** Tornar a aplicação significativamente mais resiliente a erros transitórios da API do Google Drive e a problemas de cota, implementando um mecanismo de retentativa configurável com backoff exponencial.
 * **Prompt para Jules (Inglês):**
     ```

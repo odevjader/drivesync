@@ -12,7 +12,7 @@ DriveSync é um aplicativo Python de linha de comando projetado para sincronizar
 
 * **Autenticação Segura com Google Drive:** Utiliza o fluxo OAuth 2.0 para autorização segura com a API do Google Drive. Os tokens são armazenados localmente para sessões futuras.
 
-* **Gerenciamento de Estado (JSON):** Salva o progresso da sincronização em um arquivo JSON (ex: `drivesync_state.json`), permitindo que o aplicativo seja interrompido e retomado de onde parou. Rastreia mapeamentos de pastas e arquivos processados (com base no tamanho e data de modificação) para evitar reprocessamento desnecessário.
+* **Gerenciamento de Estado (SQLite):** Utiliza um banco de dados SQLite (ex: `drivesync_state.db`) para salvar o progresso da sincronização, permitindo que o aplicativo seja interrompido e retomado. Este método oferece melhor performance e escalabilidade em comparação com arquivos JSON, especialmente para grandes volumes de arquivos. Rastreia mapeamentos de pastas e arquivos processados (com base no tamanho e data de modificação) para evitar reprocessamento desnecessário.
 
 * **Travessia** Recursiva de **Arquivos Locais:** Capacidade de percorrer recursivamente a estrutura de pastas locais e identificar arquivos e pastas.
 
@@ -43,8 +43,6 @@ DriveSync é um aplicativo Python de linha de comando projetado para sincronizar
 * **Documentação** e Testes **Manuais:** `README.md` detalhado, docstrings no código e um guia `TESTING_STRATEGY.md`.
 
 ### Planejadas (Melhorias Pós-v1.0)
-
-* **Gerenciamento de Estado com SQLite (Tarefa P1):** Refatorar o sistema de gerenciamento de estado para usar SQLite em vez de JSON, visando melhor performance e escalabilidade para grandes volumes de arquivos.
 
 * **Tratamento** Avançado de Erros **e Retentativas para API (Tarefa P2):** Implementar um mecanismo sofisticado e configurável de retentativas com backoff exponencial para todas as chamadas à API do Google Drive, aumentando a resiliência contra erros transitórios e limites de cota.
 
@@ -118,7 +116,7 @@ DriveSync é um aplicativo Python de linha de comando projetado para sincronizar
 
      * `target_drive_folder_id`: (Na seção `[Sync]`, opcional) ID da pasta no Google Drive onde a sincronização será feita. Se vazio, usará a raiz do Drive.
 
-     * `state_file`: (Na seção `[Sync]`) Nome do arquivo para armazenar o estado da sincronização (ex: `drivesync_state.json`).
+     * `state_file`: (Na seção `[Sync]`) Nome do arquivo de banco de dados SQLite para armazenar o estado da sincronização (ex: `drivesync_state.db`).
 
      * `log_file`: (Na seção `[Logging]`) Nome do arquivo de log (ex: `app.log`).
 
@@ -133,7 +131,7 @@ DriveSync é um aplicativo Python de linha de comando projetado para sincronizar
 
 ## Estado da Aplicação
 
-A aplicação mantém seu estado de sincronização em um arquivo JSON (por padrão `drivesync_state.json`, configurável em `config.ini`). Este arquivo armazena informações críticas para retomar tarefas de sincronização e rastrear itens sincronizados e estruturas de pastas do Drive. Geralmente, não é recomendado editar este arquivo manualmente.
+A aplicação mantém seu estado de sincronização em um arquivo de banco de dados SQLite (por padrão `drivesync_state.db`, configurável em `config.ini`). Este arquivo armazena informações críticas para retomar tarefas de sincronização e rastrear itens sincronizados e estruturas de pastas do Drive. É ainda mais crítico não editar este arquivo manualmente, pois isso pode corromper o banco de dados e o estado da sincronização.
 
 ## Uso
 

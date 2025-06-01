@@ -7,7 +7,7 @@ import os
 # import sys # sys.argv will be replaced by argparse
 from drivesync_app.logger_config import setup_logger
 from drivesync_app.autenticacao_drive import get_drive_service
-from drivesync_app.gerenciador_estado import load_state, save_state
+from drivesync_app import gerenciador_estado # Updated import
 from drivesync_app.gerenciador_drive import find_or_create_folder, list_folder_contents
 from drivesync_app.processador_arquivos import walk_local_directory
 from .sync_logic import run_sync # Main synchronization logic
@@ -93,9 +93,19 @@ def main():
         config['Sync']['target_drive_folder_id'] = args.target_drive_folder_id
         logger.info(f"Overridden target_drive_folder_id with command line argument: {args.target_drive_folder_id}")
 
-    # Carregar o estado da aplicação
-    estado_app = load_state(config)
-    logger.info(f"Loaded state: {len(estado_app.get('processed_items', {}))} processed items, {len(estado_app.get('folder_mappings', {}))} folder mappings.")
+    # Inicializar o banco de dados de estado
+    db_connection = gerenciador_estado.initialize_state_db(config)
+    if not db_connection:
+        logger.error("Falha ao inicializar o banco de dados de estado. A aplicação não pode continuar.")
+        return # Exit if DB connection fails
+
+    # Log initial state from DB (optional, can be more detailed)
+    try:
+        initial_processed_items = gerenciador_estado.get_all_processed_items(db_connection)
+        initial_folder_mappings = gerenciador_estado.get_all_folder_mappings(db_connection)
+        logger.info(f"Database initialized. Found {len(initial_processed_items)} processed items and {len(initial_folder_mappings)} folder mappings.")
+    except Exception as e:
+        logger.error(f"Error reading initial state from DB for logging: {e}")
 
     drive_service = None # Inicializar drive_service
 
@@ -196,17 +206,16 @@ def main():
         if not config.get('Sync', 'source_folder', fallback=None):
             logger.error("Configuração 'source_folder' em [Sync] está vazia ou não definida. Defina o caminho da pasta de origem no config.ini ou via argumento --source-folder. Sincronização interrompida.")
         elif drive_service:
-            if estado_app is not None:
-                logger.info(f"Estado ANTES da sincronização: {len(estado_app.get('processed_items', {}))} itens processados, {len(estado_app.get('folder_mappings', {}))} mapeamentos de pastas.")
+            # estado_app is no longer a single loaded dict.
+            # We pass the db_connection to run_sync.
+            # Logging of pre-sync state might need adjustment or be handled within run_sync if necessary.
+            logger.info("Iniciando run_sync...")
+            run_sync(config, drive_service, db_connection, args.dry_run) # Passa db_connection
 
-                run_sync(config, drive_service, estado_app, args.dry_run) # Passa args.dry_run
-
-                logger.info(f"Chamada para run_sync concluída (Dry run: {args.dry_run}).")
-                if args.dry_run:
-                    logger.info("[Dry Run] Nenhuma alteração de estado foi salva.")
-                # O estado será salvo no final da função main (se não for dry_run, run_sync modifica estado_app in-place)
-            else:
-                logger.error("Estado da aplicação não carregado. Sincronização interrompida.")
+            logger.info(f"Chamada para run_sync concluída (Dry run: {args.dry_run}).")
+            if args.dry_run:
+                logger.info("[Dry Run] Nenhuma alteração de estado foi salva no banco de dados (verificado dentro de run_sync).")
+            # Database changes are now handled within run_sync using transactions.
         else:
             logger.error("Falha ao autenticar com o Google Drive ou serviço não disponível. Sincronização interrompida.")
 
@@ -214,11 +223,9 @@ def main():
     if args.verify:
         logger.info("Processo de verificação iniciado pelo argumento --verify.")
         if drive_service:
-            if estado_app is not None:
-                verify_sync(config, drive_service, estado_app, logger) # Pass the main logger
-                logger.info("Chamada para verify_sync concluída.")
-            else:
-                logger.error("Estado da aplicação não carregado. Verificação interrompida.")
+            # Pass db_connection to verify_sync
+            verify_sync(config, drive_service, db_connection, logger)
+            logger.info("Chamada para verify_sync concluída.")
         else:
             logger.error("Falha ao autenticar com o Google Drive ou serviço não disponível. Verificação interrompida.")
 
@@ -236,30 +243,18 @@ def main():
     # ou se houver uma interface gráfica/web em outro lugar.
     # print("DriveSync App - Executando...") # Esta linha pode ser redundante se tudo for logado.
 
-    # Salvar o estado da aplicação antes de finalizar
-    # Se for dry_run, as modificações em `estado_app` dentro de `run_sync` foram condicionais
-    # e não deveriam ter ocorrido, mas `save_state` é chamado de qualquer forma.
-    # `run_sync` deve garantir que não modifica `estado_app` se `dry_run` for True.
-    # Verification logic does not modify state, so save_state is fine after verify.
-    if estado_app is not None:
-        if args.sync and args.dry_run: # If sync was called with dry_run, state shouldn't have changed.
-            logger.info("[Dry Run] Estado da aplicação não foi salvo pois nenhuma alteração de sincronização deveria ter ocorrido.")
-        elif args.verify: # If verify was called, state is not modified by it.
-            logger.info("Verificação concluída. O estado da aplicação não é modificado pela verificação.")
-            # Optionally, could skip saving state here if no other action modified it, but saving is harmless.
-            if save_state(config, estado_app): # Save state in case it was loaded and fixed (e.g. missing keys)
-                logger.info("Estado da aplicação salvo (pós-verificação, sem alterações da verificação).")
-            else:
-                logger.error("Falha ao salvar o estado da aplicação (pós-verificação).")
-        elif save_state(config, estado_app):
-            logger.info("Estado da aplicação salvo com sucesso.")
-        else:
-            # This case would be for non-sync-dry_run, non-verify actions where save_state failed.
-            logger.error("Falha ao salvar o estado da aplicação.")
-    else:
-        logger.warning("Variável de estado não definida, não foi possível salvar o estado.")
+    # A persistência do estado agora é gerenciada diretamente pelas funções em gerenciador_estado
+    # usando transações no banco de dados. Não há mais um save_state() global aqui.
+    # No entanto, precisamos fechar a conexão com o banco de dados.
 
-    logger.info("DriveSyncApp finalizando ou aguardando mais instruções (se aplicável).")
+    if db_connection:
+        try:
+            db_connection.close()
+            logger.info("Conexão com o banco de dados de estado fechada.")
+        except Exception as e:
+            logger.error(f"Erro ao fechar a conexão com o banco de dados: {e}")
+
+    logger.info("DriveSyncApp finalizando.")
 
 
 if __name__ == "__main__":

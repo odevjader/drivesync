@@ -4,11 +4,11 @@ import logging
 from pathlib import Path
 from . import processador_arquivos
 from . import gerenciador_drive
-# from . import gerenciador_estado # State is passed in, direct use might be minimal
+from . import gerenciador_estado # Import for DB functions
 
 logger = logging.getLogger(__name__)
 
-def run_sync(config, drive_service, app_state, dry_run=False):
+def run_sync(config, drive_service, db_connection, dry_run=False): # Changed app_state to db_connection
     """
     Orchestrates the main synchronization logic between a local folder and Google Drive.
 
@@ -20,26 +20,24 @@ def run_sync(config, drive_service, app_state, dry_run=False):
     - Retrieving source and target folder information from `config`.
     - Walking the local directory structure.
     - For each local folder:
-        - Checking if it's already mapped in `app_state['folder_mappings']`.
+        - Checking if it's already mapped by calling `gerenciador_estado.get_folder_mapping()`.
         - If not, finding or creating the folder on Google Drive (unless `dry_run` is True).
-        - Storing new folder mappings in `app_state` (if not `dry_run`).
+        - Storing new folder mappings using `gerenciador_estado.update_folder_mapping()` (if not `dry_run`).
         - Maintaining a temporary map (`local_to_drive_parent_map`) to find Drive parent IDs for children.
     - For each local file:
-        - Comparing its current size and modification time against stored state in `app_state['processed_items']`.
+        - Comparing its current size and modification time against stored state retrieved by `gerenciador_estado.get_processed_item()`.
         - Uploading the file if it's new or changed (unless `dry_run` is True).
-        - Updating `app_state['processed_items']` with the Drive file ID and local metadata after successful upload (if not `dry_run`).
+        - Updating processed item details using `gerenciador_estado.update_processed_item()` (if not `dry_run`).
     - If `dry_run` is True, all Drive operations (folder creation, file upload) and
-      state modifications (`app_state`) are simulated and logged, but not actually performed.
+      database state modifications are simulated and logged, but not actually performed.
 
     Args:
         config (configparser.ConfigParser): The application's loaded configuration object.
         drive_service (googleapiclient.discovery.Resource): Authenticated Google Drive API service instance.
-        app_state (dict): The application's current state, loaded from a state file.
-                          This dictionary is modified in-place with new folder mappings
-                          and processed item details.
+        db_connection (sqlite3.Connection): Active SQLite database connection.
         dry_run (bool, optional): If True, the function simulates synchronization
                                   operations without making any actual changes to
-                                  Google Drive or the application state. Defaults to False.
+                                  Google Drive or the application state database. Defaults to False.
     """
     if dry_run:
         logger.info("Dry run mode enabled. No actual changes will be made to Google Drive or application state.")
@@ -71,14 +69,8 @@ def run_sync(config, drive_service, app_state, dry_run=False):
 
     logger.info(f"Source folder: '{source_folder_str}', Target Drive folder ID: '{target_drive_folder_id}'")
 
-    # Ensure essential state keys are present (should be handled by load_state, but as a safeguard)
-    if 'folder_mappings' not in app_state:
-        logger.warning("'folder_mappings' not found in app_state, initializing.")
-        app_state['folder_mappings'] = {}
-    if 'processed_items' not in app_state:
-        logger.warning("'processed_items' not found in app_state, initializing.")
-        app_state['processed_items'] = {}
-
+    # State keys 'folder_mappings' and 'processed_items' are now tables in the DB.
+    # No need to check for their existence in an app_state dict.
     local_to_drive_parent_map = {'.': target_drive_folder_id}
 
     logger.info(f"Starting processing of local directory: {source_folder_str}")
@@ -96,8 +88,10 @@ def run_sync(config, drive_service, app_state, dry_run=False):
         if item['type'] == 'folder':
             logger.info(f"Processing folder: '{relative_item_path}' (Local Name: '{item_name}')")
             drive_folder_id = None
-            if relative_item_path in app_state['folder_mappings']:
-                drive_folder_id = app_state['folder_mappings'][relative_item_path]
+            existing_mapping = gerenciador_estado.get_folder_mapping(db_connection, relative_item_path)
+
+            if existing_mapping:
+                drive_folder_id = existing_mapping['drive_folder_id']
                 logger.info(f"Folder mapping already exists for '{relative_item_path}'. Drive ID: '{drive_folder_id}'")
             else:
                 if not dry_run:
@@ -108,12 +102,16 @@ def run_sync(config, drive_service, app_state, dry_run=False):
                     logger.info(f"[Dry Run] Would attempt to find or create Drive folder for '{item_name}'. Simulated ID: '{drive_folder_id}'")
 
             if drive_folder_id:
-                if relative_item_path not in app_state['folder_mappings']:
+                if not existing_mapping: # Only update if it's a new mapping
                     if not dry_run:
-                        app_state['folder_mappings'][relative_item_path] = drive_folder_id
-                        logger.info(f"New folder mapping added: Local '{relative_item_path}' -> Drive ID '{drive_folder_id}'")
+                        mapping_details = {'local_relative_path': relative_item_path, 'drive_folder_id': drive_folder_id}
+                        if gerenciador_estado.update_folder_mapping(db_connection, mapping_details):
+                            logger.info(f"New folder mapping added to DB: Local '{relative_item_path}' -> Drive ID '{drive_folder_id}'")
+                        else:
+                            logger.error(f"Failed to add folder mapping to DB for '{relative_item_path}'.")
                     else:
-                        logger.info(f"[Dry Run] Would add folder mapping: Local '{relative_item_path}' -> Drive ID '{drive_folder_id}'")
+                        logger.info(f"[Dry Run] Would add folder mapping to DB: Local '{relative_item_path}' -> Drive ID '{drive_folder_id}'")
+
                 # Always update local_to_drive_parent_map for the current session, even in dry_run, to allow child processing
                 local_to_drive_parent_map[relative_item_path] = drive_folder_id
                 logger.debug(f"Updated local_to_drive_parent_map: '{relative_item_path}' -> '{drive_folder_id}' (Dry run: {dry_run})")
@@ -127,23 +125,20 @@ def run_sync(config, drive_service, app_state, dry_run=False):
             current_local_modified_time = item['modified_time']
             needs_upload = True # Assume upload is needed unless state check proves otherwise
 
-            # Check if the file is already in processed_items and if it has changed
-            if relative_item_path in app_state['processed_items']:
-                stored_item_info = app_state['processed_items'][relative_item_path]
+            stored_item_info = gerenciador_estado.get_processed_item(db_connection, relative_item_path)
+
+            if stored_item_info:
                 stored_size = stored_item_info.get('local_size')
                 stored_modified_time = stored_item_info.get('local_modified_time')
-                drive_id = stored_item_info.get('drive_id') # For logging purposes
+                drive_id = stored_item_info.get('drive_id') # For logging
 
-                # Condition for skipping: if size and modified time match stored values
                 if stored_size == current_local_size and stored_modified_time == current_local_modified_time:
-                    logger.info(f"File '{relative_item_path}' is already synced and unchanged. Skipping. Drive ID: {drive_id}")
+                    logger.info(f"File '{relative_item_path}' is already synced and unchanged (checked against DB). Skipping. Drive ID: {drive_id}")
                     needs_upload = False
                 else:
-                    # Condition for re-upload: if size or modified time differs
-                    logger.info(f"File '{relative_item_path}' has changed (Size: {stored_size} -> {current_local_size}, ModTime: {stored_modified_time} -> {current_local_modified_time}). Marked for re-upload. Old Drive ID: {drive_id}")
+                    logger.info(f"File '{relative_item_path}' has changed (DB Size: {stored_size} -> Local: {current_local_size}, DB ModTime: {stored_modified_time} -> Local: {current_local_modified_time}). Marked for re-upload. Old Drive ID: {drive_id}")
             else:
-                # Condition for new file: if not in processed_items
-                logger.info(f"File '{relative_item_path}' is new. Preparing for upload.")
+                logger.info(f"File '{relative_item_path}' is new (not found in DB). Preparing for upload.")
 
             # Proceed with upload if needed
             if needs_upload:
@@ -160,22 +155,26 @@ def run_sync(config, drive_service, app_state, dry_run=False):
 
                         if new_drive_file_id:
                             logger.info(f"File '{relative_item_path}' uploaded/re-uploaded successfully. New Drive ID: {new_drive_file_id}")
-                            # Update state with new Drive ID and current local metadata
-                            app_state['processed_items'][relative_item_path] = {
+                            item_db_details = {
+                                'local_relative_path': relative_item_path,
                                 'drive_id': new_drive_file_id,
                                 'local_size': current_local_size,
-                                'local_modified_time': current_local_modified_time
+                                'local_modified_time': current_local_modified_time,
+                                'drive_md5_checksum': None # MD5 checksum is not retrieved by current upload_file
                             }
-                            logger.info(f"Updated state for '{relative_item_path}' with new Drive ID and local metadata.")
+                            if gerenciador_estado.update_processed_item(db_connection, item_db_details):
+                                logger.info(f"Updated DB for '{relative_item_path}' with new Drive ID and local metadata.")
+                            else:
+                                logger.error(f"Failed to update DB for '{relative_item_path}' after upload.")
                         else:
-                            logger.error(f"Upload failed for '{relative_item_path}'. State not updated for this item.")
+                            logger.error(f"Upload failed for '{relative_item_path}'. DB state not updated for this item.")
                     else:
                         # --- Dry Run: Simulate Upload ---
                         new_drive_file_id = f"dry_run_file_id_{relative_item_path.replace('/', '_')}" # Simulated ID
                         logger.info(f"[Dry Run] Would attempt to upload file '{local_full_path}' as '{item_name}' to Drive parent ID '{drive_parent_id}'.")
                         logger.info(f"[Dry Run] Simulated new Drive File ID would be '{new_drive_file_id}'.")
-                        # Do not update app_state['processed_items'] in dry run
-                        logger.info(f"[Dry Run] Would update state for '{relative_item_path}' with simulated Drive ID and local metadata (Size: {current_local_size}, ModTime: {current_local_modified_time}).")
+                        # Do not call update_processed_item in dry run
+                        logger.info(f"[Dry Run] Would update DB for '{relative_item_path}' with simulated Drive ID '{new_drive_file_id}' and local metadata (Size: {current_local_size}, ModTime: {current_local_modified_time}).")
                 else:
                     # This case should ideally be rare if parent folder processing is robust
                     logger.error(f"Cannot upload file '{relative_item_path}' because its parent Drive folder ID could not be determined. Skipping.")

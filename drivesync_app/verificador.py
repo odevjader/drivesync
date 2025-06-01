@@ -2,9 +2,10 @@
 
 import logging
 from drivesync_app import processador_arquivos # To iterate through local files
+from drivesync_app import gerenciador_estado # To access state DB
 from googleapiclient.errors import HttpError # To handle Drive API errors
 
-def verify_sync(config, drive_service, current_state, logger_instance):
+def verify_sync(config, drive_service, db_connection, logger_instance): # Changed current_state to db_connection
     """
     Verifies the consistency of synchronized files between the local source,
     the application's recorded state, and Google Drive.
@@ -28,8 +29,7 @@ def verify_sync(config, drive_service, current_state, logger_instance):
                                             used to get the `source_folder`.
         drive_service (googleapiclient.discovery.Resource): Authenticated Google Drive
                                                             API service instance.
-        current_state (dict): The application's current synchronization state,
-                              containing `processed_items` and `folder_mappings`.
+        db_connection (sqlite3.Connection): Active SQLite database connection.
         logger_instance (logging.Logger): The logger instance to use for output.
     """
     logger = logger_instance # Use the passed logger
@@ -58,15 +58,15 @@ def verify_sync(config, drive_service, current_state, logger_instance):
             relative_path = item['path']
             local_size = item['size'] # This is an integer
 
-            if relative_path in current_state.get('processed_items', {}):
-                stored_info = current_state['processed_items'][relative_path]
+            stored_info = gerenciador_estado.get_processed_item(db_connection, relative_path)
+
+            if stored_info:
                 drive_id = stored_info.get('drive_id')
-                # stored_local_size_in_state = stored_info.get('local_size') # Not directly used for Drive comparison here
+                # stored_local_size_in_db = stored_info.get('local_size') # Not directly used for Drive comparison here
 
                 if not drive_id:
-                    logger.warning(f"File '{relative_path}' is in state but has no Drive ID. Skipping Drive check for this item.")
-                    # This might be an inconsistent state, or an item that failed post-upload update
-                    mismatch_files_count +=1 # Count as a mismatch/inconsistency
+                    logger.warning(f"File '{relative_path}' is in DB state but has no Drive ID. Skipping Drive check for this item.")
+                    mismatch_files_count +=1
                     continue
 
                 try:
@@ -113,12 +113,21 @@ def verify_sync(config, drive_service, current_state, logger_instance):
                     logger.error(f"Unexpected error verifying file '{relative_path}' (Drive ID: {drive_id}) on Drive: {e}")
                     mismatch_files_count += 1 # Count as a mismatch due to unexpected error
 
-            else: # file not in processed_items
-                logger.warning(f"Local file '{relative_path}' NOT FOUND in sync state (processed_items).")
+            else: # file not in processed_items table in DB
+                logger.warning(f"Local file '{relative_path}' NOT FOUND in sync state DB (processed_items table).")
                 local_only_files_count += 1
 
+    # Optional: Add loop here to check items in DB that are not present locally.
+    # all_db_items = gerenciador_estado.get_all_processed_items(db_connection)
+    # for db_rel_path, db_item_info in all_db_items.items():
+    #     local_full_path = Path(source_folder) / db_rel_path
+    #     if not local_full_path.exists():
+    #         logger.warning(f"Item '{db_rel_path}' (Drive ID: {db_item_info.get('drive_id')}) is in state DB but NOT FOUND locally.")
+    #         # Increment a new counter for "state_only_items_count" or similar
+
     logger.info(f"Verification Summary --- Total local files processed: {verified_files_count}")
-    logger.info(f"  - Size mismatches or Drive access issues: {mismatch_files_count}")
-    logger.info(f"  - Local files not found in state: {local_only_files_count}")
-    logger.info(f"  - Files in state but missing/trashed on Drive: {drive_missing_or_trashed_files_count}")
+    logger.info(f"  - Size mismatches or Drive access/API issues: {mismatch_files_count}")
+    logger.info(f"  - Local files not found in state DB: {local_only_files_count}")
+    logger.info(f"  - Files in state DB but missing/trashed on Drive: {drive_missing_or_trashed_files_count}")
+    # Add new counter here if the optional loop above is implemented
     logger.info("File verification process completed.")
