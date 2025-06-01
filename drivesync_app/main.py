@@ -149,14 +149,16 @@ def main():
             logger.info(f"Listando arquivos locais de: {source_folder_val}")
             try:
                 item_count = 0
-                for item in walk_local_directory(source_folder):
+                # Corrected: Pass source_folder_val to walk_local_directory
+                for item in walk_local_directory(source_folder_val):
                     item_count += 1
                     if item['type'] == 'file':
                         logger.info(f"  Encontrado: Tipo=arquivo, Nome='{item['name']}', CaminhoRelativo='{item['path']}', Tamanho={item['size']}")
                     else: # pasta
                         logger.info(f"  Encontrado: Tipo=pasta, Nome='{item['name']}', CaminhoRelativo='{item['path']}'")
                 if item_count == 0:
-                    logger.info(f"Nenhum item encontrado em '{source_folder}'.")
+                    # Corrected: Use source_folder_val in the log message
+                    logger.info(f"Nenhum item encontrado em '{source_folder_val}'.")
             except Exception as e: # Catch potential errors from walk_local_directory itself if it raises them
                 logger.error(f"Erro ao listar arquivos locais de '{source_folder_val}': {e}")
         # else: # Covered by the check for source_folder_val
