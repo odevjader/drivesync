@@ -69,22 +69,21 @@ Este documento detalha o plano de desenvolvimento para o projeto DriveSync, incl
 * **Resumo:** Realizada uma revisão geral do código com foco em otimizações e refinamentos. Melhorado o tratamento de erros em `gerenciador_drive.py` (para `find_or_create_folder` e `list_folder_contents`) com logs mais detalhados, incluindo status HTTP e conteúdo do erro. A clareza do código em `sync_logic.py` foi aprimorada com comentários adicionais e um docstring mais completo para a função `run_sync`. Docstrings foram revisados e melhorados para funções chave em `verificador.py`, `autenticacao_drive.py`, `logger_config.py`, e `main.py`. Verificada a utilização correta de parâmetros em `processador_arquivos.py`.
 * **Ficheiros Modificados:** `drivesync_app/gerenciador_drive.py`, `drivesync_app/sync_logic.py`, `drivesync_app/verificador.py`, `drivesync_app/autenticacao_drive.py`, `drivesync_app/logger_config.py`, `drivesync_app/main.py`, `drivesync_app/processador_arquivos.py`.
 
+### ✅ Tarefa 12: Documentação Final e Testes
+* **Status:** ✅ **Concluído**
+* **Resumo:** Finalizada a documentação do projeto. Realizada uma revisão completa do `README.md` para garantir que todas as funcionalidades (Tasks 1-10) estão descritas, as instruções de configuração estão claras e os exemplos de uso da CLI são precisos. Adicionadas/verificadas docstrings em todos os módulos (`autenticacao_drive.py`, `gerenciador_drive.py`, `gerenciador_estado.py`, `logger_config.py`, `main.py`, `processador_arquivos.py`, `sync_logic.py`, `verificador.py`), incluindo docstrings de módulo para melhor entendimento geral. Criado o arquivo `TESTING_STRATEGY.md` com um guia detalhado para testes manuais das principais funcionalidades da aplicação.
+* **Ficheiros Modificados/Criados:** `README.md`, `TESTING_STRATEGY.md`, `drivesync_app/autenticacao_drive.py`, `drivesync_app/gerenciador_drive.py`, `drivesync_app/gerenciador_estado.py`, `drivesync_app/logger_config.py`, `drivesync_app/main.py`, `drivesync_app/processador_arquivos.py`, `drivesync_app/sync_logic.py`, `drivesync_app/verificador.py`.
+
 ---
 
 ## Próximas Tarefas (para Jules)
 
-### 📋 Tarefa 12: Documentação Final e Testes
-* **Branch Sugerida:** `feature/final-docs-testing`
-* **Prompt para Jules (Inglês):**
-    ```
-    Finalize all documentation and add more comprehensive testing notes or examples.
-    Tasks:
-    1.  **Update `README.md`:** Ensure all features, setup instructions, and usage examples are complete and accurate.
-    2.  **Docstrings and Comments:** Review all modules and functions to ensure they have clear, concise docstrings and inline comments where necessary.
-    3.  **Usage Examples:** Provide more detailed usage examples in the `README.md` or a separate `USAGE.md` file.
-    4.  **Testing Strategy (Notes):** Document a manual testing strategy or provide examples of how to test different functionalities. (Automated tests are out of scope for Jules for now unless specifically requested later).
-    ```
-* **Ficheiros a Modificar:** `README.md`, todos os ficheiros `.py` para docstrings/comentários.
-* **Considerações:** Foco na usabilidade e manutenibilidade do projeto.
+Todas as tarefas planejadas foram concluídas. O projeto DriveSync atingiu os objetivos definidos neste roadmap.
+
+Possíveis trabalhos futuros (fora do escopo original):
+* Implementação de tratamento para exclusões de arquivos (local ou Drive).
+* Comparação de arquivos por checksum MD5 para maior robustez na detecção de alterações.
+* Suporte para múltiplas configurações/perfis de sincronização.
+* Desenvolvimento de uma interface gráfica (GUI).
 
 ---

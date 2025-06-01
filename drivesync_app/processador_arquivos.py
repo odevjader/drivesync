@@ -1,3 +1,5 @@
+"""Módulo para processamento de arquivos e diretórios locais."""
+
 import os
 import logging
 from pathlib import Path

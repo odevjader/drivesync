@@ -1,3 +1,5 @@
+"""Módulo para interações com a API do Google Drive (operações de ficheiros e pastas)."""
+
 import logging
 import mimetypes # For guessing MIME types
 import time # For sleep in retry logic

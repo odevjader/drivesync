@@ -1,3 +1,5 @@
+"""Módulo para verificar a consistência da sincronização entre arquivos locais, estado e Google Drive."""
+
 import logging
 from drivesync_app import processador_arquivos # To iterate through local files
 from googleapiclient.errors import HttpError # To handle Drive API errors

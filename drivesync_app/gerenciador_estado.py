@@ -1,3 +1,5 @@
+"""Módulo para carregar e salvar o estado da aplicação (ex: mapeamentos de pastas, itens processados)."""
+
 import json
 import logging
 import os

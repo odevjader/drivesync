@@ -1,3 +1,5 @@
+"""Módulo contendo a lógica principal de sincronização de arquivos e pastas."""
+
 import logging
 from pathlib import Path
 from . import processador_arquivos

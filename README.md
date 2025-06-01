@@ -12,16 +12,15 @@ DriveSync é um aplicativo Python de linha de comando projetado para sincronizar
 * **Gerenciamento de Estado:** Salva o progresso da sincronização em um arquivo (ex: `drivesync_state.json`), permitindo que o aplicativo seja interrompido e retomado de onde parou, evitando reprocessamento desnecessário de itens já sincronizados e mapeamentos de pastas.
 * **Travessia Recursiva de Arquivos:** Capacidade de percorrer recursivamente a estrutura de pastas locais e identificar ficheiros e pastas.
 * **Sincronização Inteligente:** Sincronização da estrutura de pastas locais e upload resumível de arquivos para o Google Drive. Verifica o estado dos arquivos (tamanho e data de modificação) para evitar re-uploads desnecessários, com tratamento de erros e retentativas para maior confiabilidade.
+* **Interface de Linha de Comando Avançada:** Utiliza `argparse` para um controle robusto das operações, incluindo a capacidade de sobrescrever configurações do `config.ini` (ex: `--source-folder`, `--target-drive-folder-id`) e realizar simulações (`--dry-run`).
+* **Verificação de Sincronização:** Permite verificar a consistência dos arquivos sincronizados entre o local, o estado da aplicação e o Google Drive (`--verify`), reportando discrepâncias de tamanho ou arquivos ausentes.
 
 ### Planejadas
 
-* **Espelhamento de Estrutura no Drive:** Criação automática da estrutura de pastas no Google Drive para espelhar a organização local.
-* **Upload Resumível de Arquivos:** Suporte a uploads resumíveis para arquivos grandes, garantindo a integridade em caso de interrupções.
-* **Ignorar Arquivos Já Sincronizados:** Verifica o estado para pular arquivos que já foram carregados com sucesso (comparando metadados como tamanho e data de modificação).
-* **Tratamento Robusto de Erros e Retentativas:** Mecanismos para lidar com erros de rede, limites da API e outras falhas, com lógica de retentativa.
-* **Verificação de Arquivos (Opcional):** Funcionalidade para verificar se todos os arquivos locais foram corretamente carregados no Google Drive.
-* **Interface de Linha de Comando (CLI) Amigável:** Argumentos para controlar diferentes modos de operação (sincronizar, autenticar, verificar).
-* **Documentação Interna:** Docstrings e comentários no código para facilitar a manutenção.
+* **Tratamento de Exclusões:** Lógica para lidar com arquivos excluídos localmente ou no Drive (atualmente, arquivos excluídos não são processados ativamente para remoção no destino).
+* **Comparação por Checksum (MD5):** Adicionar verificação opcional de arquivos por checksum MD5 para uma detecção de alterações mais robusta (além de tamanho e data de modificação).
+* **Suporte para Múltiplas Configurações de Sincronização:** Possibilidade de definir e executar diferentes perfis de sincronização.
+* **Interface Gráfica (GUI):** Desenvolvimento de uma interface gráfica para facilitar o uso por usuários não técnicos (consideração futura de longo prazo).
 
 ## Configuração e Instalação
 
@@ -67,9 +66,10 @@ DriveSync é um aplicativo Python de linha de comando projetado para sincronizar
         * `log_file`: (Na secção `[Logging]`) Nome do arquivo de log (ex: `app.log`).
         * `log_level`: (Na secção `[Logging]`) Nível de log (DEBUG, INFO, WARNING, ERROR, CRITICAL).
 
-## Application State
-
-The application maintains its synchronization state in a JSON file (by default `drivesync_state.json`, configurable in `config.ini`). This file stores information critical for resuming synchronization tasks and keeping track of synced items and Drive folder structures. It's generally not recommended to edit this file manually.
+    **Nota Importante:** Após preencher o `config.ini` e colocar o arquivo de credenciais (`client_secret_file`), execute o comando de autenticação pela primeira vez:
+    ```bash
+    python -m drivesync_app.main --authenticate
+    ```
 
 ## Application State
 
