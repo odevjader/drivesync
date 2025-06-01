@@ -1,9 +1,10 @@
 """Ponto de entrada principal do aplicativo DriveSync."""
 
+import argparse
 import configparser
 import logging
 import os
-import sys # Importar sys
+# import sys # sys.argv will be replaced by argparse
 from drivesync_app.logger_config import setup_logger
 from drivesync_app.autenticacao_drive import get_drive_service
 from drivesync_app.gerenciador_estado import load_state, save_state
@@ -37,6 +38,36 @@ def main():
     logger = logging.getLogger(__name__) # Logger para main.py
     logger.info("DriveSyncApp iniciado. Logger configurado.")
 
+    # --- Argument Parsing ---
+    parser = argparse.ArgumentParser(description="DriveSyncApp: Synchronizes a local folder with Google Drive.")
+    parser.add_argument('--authenticate', action='store_true', help='Authenticate with Google Drive and save credentials.')
+    parser.add_argument('--list-local', action='store_true', help='List local files in the configured source_folder.')
+    parser.add_argument('--test-drive-ops', action='store_true', help='Run test operations on Google Drive (create folder, list root).')
+    parser.add_argument('--sync', action='store_true', help='Initiate the synchronization process.')
+
+    # Arguments for Sync
+    parser.add_argument('--source-folder', type=str, default=None,
+                        help='Override the source_folder from config.ini for the current run.')
+    parser.add_argument('--target-drive-folder-id', type=str, default=None,
+                        help='Override the target_drive_folder_id from config.ini for the current run.')
+    parser.add_argument('--dry-run', action='store_true',
+                        help='Simulate sync operations without making any changes to Google Drive or local state. Use with --sync.')
+
+    args = parser.parse_args()
+
+    # --- Config Overrides ---
+    if args.source_folder:
+        if not config.has_section('Sync'):
+            config.add_section('Sync')
+        config['Sync']['source_folder'] = args.source_folder
+        logger.info(f"Overridden source_folder with command line argument: {args.source_folder}")
+
+    if args.target_drive_folder_id:
+        if not config.has_section('Sync'):
+            config.add_section('Sync')
+        config['Sync']['target_drive_folder_id'] = args.target_drive_folder_id
+        logger.info(f"Overridden target_drive_folder_id with command line argument: {args.target_drive_folder_id}")
+
     # Carregar o estado da aplicação
     estado_app = load_state(config)
     logger.info(f"Loaded state: {len(estado_app.get('processed_items', {}))} processed items, {len(estado_app.get('folder_mappings', {}))} folder mappings.")
@@ -44,17 +75,25 @@ def main():
     drive_service = None # Inicializar drive_service
 
     # Autenticação e obtenção do drive_service se argumentos específicos que o requerem forem passados
-    if any(arg in sys.argv for arg in ['--authenticate', '--test-drive-ops', '--sync']):
+    if args.authenticate or args.test_drive_ops or args.sync:
         logger.info("Uma operação que requer autenticação do Drive foi solicitada.")
         drive_service = get_drive_service(config)
 
         if drive_service:
             logger.info("Serviço do Google Drive autenticado e obtido com sucesso.")
-        else:
-            logger.error("Falha ao obter o serviço do Google Drive. Verifique os logs e a configuração.")
+        elif not args.authenticate: # Only error if it wasn't an explicit auth attempt that failed
+            logger.error("Falha ao obter o serviço do Google Drive. Verifique os logs e a configuração. Operações dependentes do Drive não podem continuar.")
+
+    # If only --authenticate is passed, get_drive_service already handles it.
+    # We can add an explicit message if only --authenticate was passed and it succeeded.
+    if args.authenticate and drive_service:
+        logger.info("Autenticação concluída e credenciais salvas (se aplicável).")
+    elif args.authenticate and not drive_service:
+        logger.error("Tentativa de autenticação explícita falhou.")
+
 
     # Lógica para --test-drive-ops
-    if "--test-drive-ops" in sys.argv:
+    if args.test_drive_ops:
         if drive_service:
             logger.info("Executando operações de teste do Drive (--test-drive-ops)...")
 
@@ -88,21 +127,23 @@ def main():
                 logger.error("Falha ao listar o conteúdo da pasta raiz.")
         else:
             logger.warning("Não foi possível executar as operações de teste do Drive porque o serviço do Drive não está disponível.")
+        # No explicit 'else' needed if drive_service is None, as the error is logged during its acquisition attempt.
+
 
     # Lógica para --list-local
-    if "--list-local" in sys.argv:
+    if args.list_local:
         logger.info("Listagem de arquivos locais solicitada (--list-local)...")
-        source_folder = None
+        # source_folder will be read from config, potentially overridden by args.source_folder
+        source_folder_val = None
         try:
-            source_folder = config['Sync']['source_folder']
-            if not source_folder: # Check for empty string after getting it
-                logger.error("Configuração 'source_folder' em [Sync] está vazia. Defina o caminho da pasta de origem.")
-                source_folder = None # Ensure it's None if empty
-        except KeyError:
-            logger.error("Configuração 'source_folder' não encontrada na seção [Sync] do config.ini.")
+            source_folder_val = config.get('Sync', 'source_folder') # Use .get for safer access
+            if not source_folder_val:
+                logger.error("Configuração 'source_folder' em [Sync] está vazia ou não definida (nem no config.ini nem via argumento). Defina o caminho da pasta de origem.")
+        except (KeyError, configparser.NoSectionError):
+            logger.error("Seção [Sync] ou configuração 'source_folder' não encontrada no config.ini e não fornecida via argumento.")
 
-        if source_folder:
-            logger.info(f"Listando arquivos locais de: {source_folder}")
+        if source_folder_val: # Proceed only if source_folder_val is not None or empty
+            logger.info(f"Listando arquivos locais de: {source_folder_val}")
             try:
                 item_count = 0
                 for item in walk_local_directory(source_folder):
@@ -114,31 +155,39 @@ def main():
                 if item_count == 0:
                     logger.info(f"Nenhum item encontrado em '{source_folder}'.")
             except Exception as e: # Catch potential errors from walk_local_directory itself if it raises them
-                logger.error(f"Erro ao listar arquivos locais de '{source_folder}': {e}")
-        else:
-            logger.info("Listagem de arquivos locais não pode prosseguir devido à falta da configuração 'source_folder'.")
+                logger.error(f"Erro ao listar arquivos locais de '{source_folder_val}': {e}")
+        # else: # Covered by the check for source_folder_val
+            # logger.info("Listagem de arquivos locais não pode prosseguir devido à falta da configuração 'source_folder'.")
 
-    # Se nenhum argumento de ação principal foi passado
-    if not any(arg in sys.argv for arg in ['--authenticate', '--test-drive-ops', '--list-local', '--sync']):
-        logger.info("Nenhuma ação específica (--authenticate, --test-drive-ops, --list-local, --sync) solicitada. Use --help para ver as opções.")
-        # Lógica principal do aplicativo (se houver alguma padrão) viria aqui
 
     # Lógica para --sync (deve ser após a obtenção do drive_service e carregamento do estado_app)
-    if "--sync" in sys.argv:
+    if args.sync:
+        if args.dry_run:
+            logger.info("Modo DRY RUN ativado para sincronização. Nenhuma alteração real será feita.")
         logger.info("Processo de sincronização iniciado pelo argumento --sync.")
-        if drive_service:
-            if estado_app is not None: # estado_app é carregado no início da main
-                logger.info(f"Estado antes da sincronização: {len(estado_app.get('processed_items', {}))} itens processados, {len(estado_app.get('folder_mappings', {}))} mapeamentos de pastas.")
 
-                run_sync(config, drive_service, estado_app) # estado_app é modificado in-place
+        if not config.get('Sync', 'source_folder', fallback=None):
+            logger.error("Configuração 'source_folder' em [Sync] está vazia ou não definida. Defina o caminho da pasta de origem no config.ini ou via argumento --source-folder. Sincronização interrompida.")
+        elif drive_service:
+            if estado_app is not None:
+                logger.info(f"Estado ANTES da sincronização: {len(estado_app.get('processed_items', {}))} itens processados, {len(estado_app.get('folder_mappings', {}))} mapeamentos de pastas.")
 
-                logger.info("Chamada para run_sync concluída.")
-                # O estado será salvo no final da função main
+                run_sync(config, drive_service, estado_app, args.dry_run) # Passa args.dry_run
+
+                logger.info(f"Chamada para run_sync concluída (Dry run: {args.dry_run}).")
+                if args.dry_run:
+                    logger.info("[Dry Run] Nenhuma alteração de estado foi salva.")
+                # O estado será salvo no final da função main (se não for dry_run, run_sync modifica estado_app in-place)
             else:
-                # Este caso não deve ocorrer se load_state sempre retorna um estado padrão
                 logger.error("Estado da aplicação não carregado. Sincronização interrompida.")
         else:
             logger.error("Falha ao autenticar com o Google Drive ou serviço não disponível. Sincronização interrompida.")
+
+    # Default behavior: if no action argument is provided
+    if not (args.authenticate or args.list_local or args.test_drive_ops or args.sync):
+        logger.info("Nenhuma ação específica solicitada. Use --help para ver as opções.")
+        parser.print_help()
+
 
     # Exemplo:
     # logger.debug("Este é um debug da aplicação principal.")
@@ -149,11 +198,18 @@ def main():
     # print("DriveSync App - Executando...") # Esta linha pode ser redundante se tudo for logado.
 
     # Salvar o estado da aplicação antes de finalizar
-    if estado_app is not None: # Assegurar que estado_app foi definido
-        if save_state(config, estado_app):
+    # Se for dry_run, as modificações em `estado_app` dentro de `run_sync` foram condicionais
+    # e não deveriam ter ocorrido, mas `save_state` é chamado de qualquer forma.
+    # `run_sync` deve garantir que não modifica `estado_app` se `dry_run` for True.
+    if estado_app is not None:
+        if args.sync and args.dry_run:
+            logger.info("[Dry Run] Estado da aplicação não foi salvo pois nenhuma alteração deveria ter ocorrido.")
+        elif save_state(config, estado_app):
             logger.info("Estado da aplicação salvo com sucesso.")
         else:
-            logger.error("Falha ao salvar o estado da aplicação.")
+            # Avoid saving if it's a dry run that somehow got here, or if save_state itself failed.
+            if not (args.sync and args.dry_run): # Only log error if it wasn't a dry run sync
+                 logger.error("Falha ao salvar o estado da aplicação.")
     else:
         logger.warning("Variável de estado não definida, não foi possível salvar o estado.")
 

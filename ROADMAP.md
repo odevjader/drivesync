@@ -54,30 +54,14 @@ Este documento detalha o plano de desenvolvimento para o projeto DriveSync, incl
 * **Resumo:** Integrado o gerenciamento de estado completo para arquivos em `drivesync_app/sync_logic.py`. Agora verifica `processed_items` (usando tamanho e data de modificação do arquivo local) para evitar re-uploads desnecessários e atualiza o estado após uploads bem-sucedidos.
 * **Ficheiros Modificados:** `drivesync_app/sync_logic.py`, `drivesync_app/gerenciador_estado.py`.
 
+### ✅ Tarefa 9: Melhorias na Interface de Linha de Comando (CLI)
+* **Status:** ✅ **Concluído**
+* **Resumo:** Refatorada a interface de linha de comando em `main.py` para usar o módulo `argparse`. Argumentos existentes (`--authenticate`, `--list-local`, `--test-drive-ops`, `--sync`) foram convertidos para argumentos `argparse`. Adicionados novos argumentos para a ação `sync`: `--source-folder`, `--target-drive-folder-id` (para sobrescrever `config.ini`) e `--dry-run` (para simular a sincronização). Melhoradas as mensagens de ajuda. `sync_logic.py` foi adaptado para suportar o modo `--dry-run`.
+* **Ficheiros Modificados:** `drivesync_app/main.py`, `drivesync_app/sync_logic.py`.
+
 ---
 
 ## Próximas Tarefas (para Jules)
-
-### 📋 Tarefa 9: Melhorias na Interface de Linha de Comando (CLI)
-* **Branch Sugerida:** `feature/cli-improvements`
-* **Prompt para Jules (Inglês):**
-    ```
-    Enhance the command-line interface in `drivesync_app/main.py` using the `argparse` module.
-
-    1.  **Implement `argparse`:**
-        * Define a main parser and subparsers if necessary (e.g., for `sync`, `auth`, `verify` commands).
-        * Current arguments like `--authenticate`, `--list-local`, `--test-drive-ops`, `--sync` should be converted to proper `argparse` arguments or subcommands.
-    2.  **Arguments for `sync` command (if using subparsers):**
-        * Optional: `--source-folder` (override `config.ini`).
-        * Optional: `--target-drive-folder-id` (override `config.ini`).
-        * Optional: `--dry-run` (simulate sync without making changes).
-    3.  **Help Messages:** Provide clear help messages for all arguments and commands.
-    4.  **Refactor `main.py`:** Structure the main execution block to call different functions based on the parsed arguments.
-    ```
-* **Ficheiros a Modificar:** `drivesync_app/main.py`.
-* **Considerações:** Design de uma CLI intuitiva.
-
----
 
 ### 📋 Tarefa 10: Módulo de Verificação de Ficheiros
 * **Branch Sugerida:** `feature/file-verification`

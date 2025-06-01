@@ -77,37 +77,73 @@ The application maintains its synchronization state in a JSON file (by default `
 
 ## Uso
 
-(Esta seção será atualizada à medida que a CLI for desenvolvida)
-
-Para autenticar o aplicativo com o Google Drive (necessário na primeira execução ou se o token expirar):
+O DriveSyncApp é controlado via argumentos de linha de comando. Abaixo estão os principais comandos e opções disponíveis.
+Para uma lista completa de todos os argumentos e suas descrições, execute:
 ```bash
-python -m drivesync_app.main --authenticate
+python -m drivesync_app.main --help
 ```
 
-Para iniciar o processo de sincronização:
-```bash
-python -m drivesync_app.main --sync
-```
-Este comando inicia o processo de sincronização entre a pasta local configurada em `source_folder` (no `config.ini`) e a pasta de destino no Google Drive (`target_drive_folder_id` ou a raiz). Ele criará a estrutura de pastas no Drive para espelhar a local e fará o upload de arquivos que ainda não foram processados.
+### Comandos Principais
 
-### Testando Operações do Drive
+*   **Autenticação:**
+    ```bash
+    python -m drivesync_app.main --authenticate
+    ```
+    Este comando inicia o processo de autenticação com o Google Drive. Necessário na primeira execução ou se os tokens de acesso expirarem. As credenciais são salvas localmente (conforme configurado em `config.ini`).
 
-Você pode testar as operações básicas do Google Drive (como criar uma pasta de teste e listar o conteúdo da raiz do seu Drive) usando o argumento `--test-drive-ops`:
+*   **Sincronização:**
+    ```bash
+    python -m drivesync_app.main --sync [opções...]
+    ```
+    Inicia o processo de sincronização entre a pasta local de origem e a pasta de destino no Google Drive.
+    *   **Opções de Sincronização:**
+        *   `--source-folder CAMINHO_DA_PASTA_LOCAL`: Permite especificar uma pasta local de origem para esta execução, sobrescrevendo o valor de `source_folder` em `config.ini`.
+        *   `--target-drive-folder-id ID_DA_PASTA_DRIVE`: Permite especificar um ID de pasta de destino no Google Drive para esta execução, sobrescrevendo o valor de `target_drive_folder_id` em `config.ini`.
+        *   `--dry-run`: Simula o processo de sincronização sem realizar quaisquer alterações reais no Google Drive ou no arquivo de estado local. Útil para verificar quais arquivos seriam transferidos ou atualizados.
 
-```bash
-python -m drivesync_app.main --test-drive-ops
-```
-Isso requer que a autenticação (um `token_target.json` válido ou executando com `--authenticate` em conjunto) já tenha sido configurada ou seja feita. O logger fornecerá feedback sobre as operações.
+*   **Listar Arquivos Locais:**
+    ```bash
+    python -m drivesync_app.main --list-local
+    ```
+    Percorre e lista os arquivos e pastas no `source_folder` configurado (ou sobrescrito via `--source-folder`) que seriam considerados para sincronização.
 
-### Listando Ficheiros Locais
+*   **Testar Operações do Drive:**
+    ```bash
+    python -m drivesync_app.main --test-drive-ops
+    ```
+    Executa operações de teste no Google Drive, como tentar criar uma pasta de teste e listar o conteúdo da pasta raiz. Requer autenticação prévia.
 
-Para listar todos os ficheiros e pastas que seriam considerados para sincronização a partir do seu `source_folder` configurado, use o argumento `--list-local`:
+### Exemplos de Uso
 
-```bash
-python -m drivesync_app.main --list-local
-```
-Isso irá percorrer o directório especificado em `config.ini` ([Sync] -> source_folder) e imprimir os itens encontrados.
+1.  **Autenticar o aplicativo:**
+    ```bash
+    python -m drivesync_app.main --authenticate
+    ```
 
+2.  **Executar uma sincronização padrão (usando configurações do `config.ini`):**
+    ```bash
+    python -m drivesync_app.main --sync
+    ```
+
+3.  **Executar uma simulação de sincronização (dry run):**
+    ```bash
+    python -m drivesync_app.main --sync --dry-run
+    ```
+
+4.  **Sincronizar especificando uma pasta de origem e destino diferente:**
+    ```bash
+    python -m drivesync_app.main --sync --source-folder "/caminho/para/meus/documentos" --target-drive-folder-id "IDdaPastaNoMeuDrive"
+    ```
+
+5.  **Listar os arquivos locais que seriam sincronizados:**
+    ```bash
+    python -m drivesync_app.main --list-local
+    ```
+
+6.  **Ver todas as opções de ajuda:**
+    ```bash
+    python -m drivesync_app.main --help
+    ```
 
 ## Estrutura do Projeto
 
