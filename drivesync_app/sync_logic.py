@@ -119,7 +119,7 @@ def run_sync(config, drive_service, db_connection, dry_run=False):
 
                 if stored_item_info:
                     if (stored_item_info.get('local_size') == current_local_size and
-                        stored_item_info.get('local_modified_time') == current_local_modified_time):
+                            stored_item_info.get('local_modified_time') == current_local_modified_time):
                         progress_bar.set_postfix_str(f"Skipped: {item_name_short}", refresh=True)
                         needs_upload = False
                         files_skipped_count +=1

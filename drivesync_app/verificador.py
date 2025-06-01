@@ -105,11 +105,11 @@ def verify_sync(config, drive_service, db_connection, logger_instance):
                     else:
                         # This case is unusual for regular files on Drive, might indicate a Google Doc or folder
                         # Google Docs, Sheets, Slides etc., do not have a 'size' field in the same way.
-                            # Their mimeType would be 'application/vnd.google-apps.document', etc.
-                            # For this verification, we assume files being synced are expected to have a byte size.
-                            logger.warning(f"File '{relative_path}' (Drive ID: {drive_id}): No size information returned from Drive. (Is it a Google Workspace document type?). Local size: {local_size}.")
-                            # Consider if this should be a mismatch. For now, treating as a warning.
-                            # If it's a Google Doc, it shouldn't have been processed as a regular file with size in `processed_items` anyway.
+                        # Their mimeType would be 'application/vnd.google-apps.document', etc.
+                        # For this verification, we assume files being synced are expected to have a byte size.
+                        logger.warning(f"File '{relative_path}' (Drive ID: {drive_id}): No size information returned from Drive. (Is it a Google Workspace document type?). Local size: {local_size}.")
+                        # Consider if this should be a mismatch. For now, treating as a warning.
+                        # If it's a Google Doc, it shouldn't have been processed as a regular file with size in `processed_items` anyway.
                 # The HttpError (including 404) should ideally be handled by the retry decorator in get_file_metadata.
                 # If get_file_metadata returns None, it means retries were exhausted or a non-retryable error occurred.
                 # Specific HttpError handling here might become redundant if get_file_metadata robustly returns None on failure.
