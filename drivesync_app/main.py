@@ -14,7 +14,29 @@ from .sync_logic import run_sync # Main synchronization logic
 from .verificador import verify_sync # Verification logic
 
 def main():
-    """Função principal para executar o aplicativo."""
+    """
+    Ponto de entrada principal do aplicativo DriveSync.
+
+    Esta função orquestra o fluxo de trabalho da aplicação:
+    1.  Lê as configurações do arquivo `config.ini`.
+    2.  Configura o sistema de logging com base nas configurações.
+    3.  Processa os argumentos da linha de comando usando `argparse`.
+    4.  Sobrescreve as configurações do `config.ini` se argumentos CLI correspondentes
+        (ex: --source-folder) forem fornecidos.
+    5.  Carrega o estado da aplicação (de `drivesync_state.json` ou similar).
+    6.  Inicializa o serviço do Google Drive (requer autenticação) se uma ação
+        que o necessita (`--sync`, `--test-drive-ops`, `--verify`, ou `--authenticate` explícito)
+        for especificada.
+    7.  Executa a ação principal com base nos argumentos fornecidos:
+        - `--authenticate`: Realiza o fluxo de autenticação OAuth 2.0.
+        - `--list-local`: Lista os arquivos na pasta de origem local.
+        - `--test-drive-ops`: Executa operações de teste no Google Drive.
+        - `--sync`: Inicia o processo de sincronização (com suporte a `--dry-run`).
+        - `--verify`: Verifica a consistência dos arquivos sincronizados.
+    8.  Se nenhuma ação específica for solicitada, exibe a mensagem de ajuda.
+    9.  Salva o estado atualizado da aplicação no final da execução (a menos que
+        a ação seja um `--sync --dry-run` ou a verificação).
+    """
     # Ler configuração
     config = configparser.ConfigParser()
 

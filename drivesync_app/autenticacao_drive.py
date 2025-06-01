@@ -18,11 +18,22 @@ def get_drive_service(config: configparser.ConfigParser):
     """
     Autentica com a API do Google Drive e retorna um objeto de serviço.
 
+    Utiliza o fluxo OAuth 2.0 para autenticação. Procura por um arquivo de token
+    existente (ex: `token.json`, configurável). Se não existir, estiver inválido ou
+    expirado e não puder ser atualizado, inicia um novo fluxo de autenticação.
+    Neste caso, o usuário será solicitado a autorizar o aplicativo através do navegador.
+    As novas credenciais são então salvas no arquivo de token para uso futuro.
+
     Args:
-        config: Objeto ConfigParser com as configurações da aplicação.
+        config (configparser.ConfigParser): Objeto ConfigParser contendo as
+            configurações da aplicação, incluindo os caminhos para o
+            `client_secret_file` (obtido do Google Cloud Console) e o
+            `token_file` (onde as credenciais do usuário são armazenadas).
 
     Returns:
-        Um objeto de serviço da API do Google Drive, ou None em caso de erro.
+        googleapiclient.discovery.Resource: Um objeto de serviço da API do Google Drive
+                                            autenticado e pronto para uso, ou None se
+                                            a autenticação falhar.
     """
     creds = None
     token_file_path = None

@@ -5,13 +5,24 @@ import configparser
 
 def setup_logger(config: configparser.ConfigParser):
     """
-    Configures the logger based on the provided configuration.
+    Configures the root logger for the application based on settings from the
+    `[Logging]` section of the `config` object.
+
+    It sets up:
+    - A file handler to write logs to a specified file (`log_file`).
+    - A console handler to output logs to the standard stream.
+    - The logging level (`log_level`) for both handlers.
+    - A common log message format.
+
+    If logging settings are missing in the `config`, it uses default fallbacks
+    (e.g., 'drivesync.log' for file path, 'INFO' for log level).
 
     Args:
-        config: ConfigParser instance with logging configuration.
+        config (configparser.ConfigParser): ConfigParser instance, expected to
+            contain a `[Logging]` section with `log_file` and `log_level` options.
     """
-    log_file_path = config.get('Logging', 'log_file', fallback='drivesync.log') # Changed 'logging' to 'Logging'
-    log_level_str = config.get('Logging', 'log_level', fallback='INFO').upper() # Changed 'logging' to 'Logging'
+    log_file_path = config.get('Logging', 'log_file', fallback='drivesync.log')
+    log_level_str = config.get('Logging', 'log_level', fallback='INFO').upper()
 
     # Get the numeric log level
     numeric_log_level = getattr(logging, log_level_str, logging.INFO)

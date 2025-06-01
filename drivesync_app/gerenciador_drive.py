@@ -60,10 +60,16 @@ def find_or_create_folder(drive_service, parent_folder_id, folder_name):
             return folder_id
 
     except HttpError as error:
-        logger.error(f"An API error occurred while finding/creating folder '{folder_name}': {error}")
+        error_content = error.content.decode('utf-8', 'ignore') if error.content else 'No additional content.'
+        logger.error(
+            f"API error occurred while finding/creating folder '{folder_name}' under parent '{parent_folder_id}'. "
+            f"Status: {error.resp.status if hasattr(error.resp, 'status') else 'N/A'}. "
+            f"Reason: {error.resp.reason if hasattr(error.resp, 'reason') else 'N/A'}. "
+            f"Details: {error_content}"
+        )
         return None
     except Exception as e:
-        logger.error(f"An unexpected error occurred in find_or_create_folder for '{folder_name}': {e}")
+        logger.error(f"An unexpected error occurred in find_or_create_folder for '{folder_name}' under parent '{parent_folder_id}': {e}", exc_info=True)
         return None
 
 def list_folder_contents(drive_service, folder_id):
@@ -107,10 +113,16 @@ def list_folder_contents(drive_service, folder_id):
         return contents
 
     except HttpError as error:
-        logger.error(f"An API error occurred while listing contents for folder ID '{folder_id}': {error}")
+        error_content = error.content.decode('utf-8', 'ignore') if error.content else 'No additional content.'
+        logger.error(
+            f"API error occurred while listing contents for folder ID '{folder_id}'. "
+            f"Status: {error.resp.status if hasattr(error.resp, 'status') else 'N/A'}. "
+            f"Reason: {error.resp.reason if hasattr(error.resp, 'reason') else 'N/A'}. "
+            f"Details: {error_content}"
+        )
         return None
     except Exception as e:
-        logger.error(f"An unexpected error occurred in list_folder_contents for folder ID '{folder_id}': {e}")
+        logger.error(f"An unexpected error occurred in list_folder_contents for folder ID '{folder_id}': {e}", exc_info=True)
         return None
 
 

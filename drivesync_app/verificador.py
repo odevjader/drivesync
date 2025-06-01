@@ -3,6 +3,33 @@ from drivesync_app import processador_arquivos # To iterate through local files
 from googleapiclient.errors import HttpError # To handle Drive API errors
 
 def verify_sync(config, drive_service, current_state, logger_instance):
+    """
+    Verifies the consistency of synchronized files between the local source,
+    the application's recorded state, and Google Drive.
+
+    It iterates through local files in the `source_folder` (defined in `config`):
+    1.  Checks if each local file is recorded in `current_state['processed_items']`.
+    2.  If recorded, retrieves the Google Drive file ID and fetches its metadata from Drive.
+    3.  Compares the local file's size with the size reported by Google Drive.
+    4.  Checks if the file on Google Drive is marked as 'trashed'.
+    5.  Logs discrepancies, such as:
+        - Local files not found in the application state.
+        - Files in the state but missing their Drive ID.
+        - Files in the state but not found on Google Drive (404 error).
+        - Files on Drive that are in the trash.
+        - Size mismatches between local and Drive versions.
+        - API or other errors encountered during verification.
+    6.  Provides a summary of verification results.
+
+    Args:
+        config (configparser.ConfigParser): The application's configuration object,
+                                            used to get the `source_folder`.
+        drive_service (googleapiclient.discovery.Resource): Authenticated Google Drive
+                                                            API service instance.
+        current_state (dict): The application's current synchronization state,
+                              containing `processed_items` and `folder_mappings`.
+        logger_instance (logging.Logger): The logger instance to use for output.
+    """
     logger = logger_instance # Use the passed logger
     logger.info("Starting synchronization verification process...")
 

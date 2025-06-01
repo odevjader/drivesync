@@ -64,26 +64,14 @@ Este documento detalha o plano de desenvolvimento para o projeto DriveSync, incl
 * **Resumo:** Implementado o módulo de verificação de ficheiros em `drivesync_app/verificador.py` com a função `verify_sync`. Esta função itera pelos ficheiros locais, compara-os com o estado (`processed_items`) e verifica os metadados (nome, tamanho, estado de 'trashed') dos ficheiros correspondentes no Google Drive. Discrepâncias como ficheiros locais não presentes no estado, ficheiros no estado mas em falta no Drive (ou na lixeira), e incompatibilidades de tamanho são registadas. Integrado em `main.py` através de um novo argumento CLI `--verify`.
 * **Ficheiros Modificados:** `drivesync_app/verificador.py`, `drivesync_app/main.py`.
 
+### ✅ Tarefa 11: Otimização e Refinamentos
+* **Status:** ✅ **Concluído**
+* **Resumo:** Realizada uma revisão geral do código com foco em otimizações e refinamentos. Melhorado o tratamento de erros em `gerenciador_drive.py` (para `find_or_create_folder` e `list_folder_contents`) com logs mais detalhados, incluindo status HTTP e conteúdo do erro. A clareza do código em `sync_logic.py` foi aprimorada com comentários adicionais e um docstring mais completo para a função `run_sync`. Docstrings foram revisados e melhorados para funções chave em `verificador.py`, `autenticacao_drive.py`, `logger_config.py`, e `main.py`. Verificada a utilização correta de parâmetros em `processador_arquivos.py`.
+* **Ficheiros Modificados:** `drivesync_app/gerenciador_drive.py`, `drivesync_app/sync_logic.py`, `drivesync_app/verificador.py`, `drivesync_app/autenticacao_drive.py`, `drivesync_app/logger_config.py`, `drivesync_app/main.py`, `drivesync_app/processador_arquivos.py`.
+
 ---
 
 ## Próximas Tarefas (para Jules)
-
-### 📋 Tarefa 11: Otimização e Refinamentos
-* **Branch Sugerida:** `feature/optimizations`
-* **Prompt para Jules (Inglês):**
-    ```
-    Review the entire codebase for potential optimizations and refinements.
-    Tasks could include:
-    1.  **Performance:** Identify any bottlenecks. Can API calls be batched (if supported and beneficial)? Is local file processing efficient?
-    2.  **Error Handling:** Ensure consistent and comprehensive error logging across all modules. Are there any unhandled exceptions?
-    3.  **Code Clarity:** Refactor complex sections for better readability. Improve comments and docstrings.
-    4.  **Resource Management:** Ensure API service objects, file handles, etc., are managed correctly.
-    5.  **Configuration:** Are all necessary options configurable? Is `config.ini` well-structured?
-    ```
-* **Ficheiros a Modificar:** Vários, conforme necessário.
-* **Considerações:** Esta é uma tarefa mais aberta, focada na qualidade geral do código.
-
----
 
 ### 📋 Tarefa 12: Documentação Final e Testes
 * **Branch Sugerida:** `feature/final-docs-testing`
