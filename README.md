@@ -113,6 +113,12 @@ python -m drivesync_app.main --help
     ```
     Executa operações de teste no Google Drive, como tentar criar uma pasta de teste e listar o conteúdo da pasta raiz. Requer autenticação prévia.
 
+*   **Verificar Sincronização:**
+    ```bash
+    python -m drivesync_app.main --verify
+    ```
+    Verifica a consistência dos arquivos sincronizados. Compara os arquivos locais com o estado registrado pelo DriveSync e os metadados dos arquivos correspondentes no Google Drive. Reporta discrepâncias como arquivos locais não presentes no estado, arquivos no estado mas ausentes no Drive (ou na lixeira), e incompatibilidades de tamanho. Requer autenticação prévia.
+
 ### Exemplos de Uso
 
 1.  **Autenticar o aplicativo:**
@@ -140,7 +146,12 @@ python -m drivesync_app.main --help
     python -m drivesync_app.main --list-local
     ```
 
-6.  **Ver todas as opções de ajuda:**
+6.  **Verificar a integridade da sincronização:**
+    ```bash
+    python -m drivesync_app.main --verify
+    ```
+
+7.  **Ver todas as opções de ajuda:**
     ```bash
     python -m drivesync_app.main --help
     ```

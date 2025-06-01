@@ -59,34 +59,14 @@ Este documento detalha o plano de desenvolvimento para o projeto DriveSync, incl
 * **Resumo:** Refatorada a interface de linha de comando em `main.py` para usar o módulo `argparse`. Argumentos existentes (`--authenticate`, `--list-local`, `--test-drive-ops`, `--sync`) foram convertidos para argumentos `argparse`. Adicionados novos argumentos para a ação `sync`: `--source-folder`, `--target-drive-folder-id` (para sobrescrever `config.ini`) e `--dry-run` (para simular a sincronização). Melhoradas as mensagens de ajuda. `sync_logic.py` foi adaptado para suportar o modo `--dry-run`.
 * **Ficheiros Modificados:** `drivesync_app/main.py`, `drivesync_app/sync_logic.py`.
 
+### ✅ Tarefa 10: Módulo de Verificação de Ficheiros
+* **Status:** ✅ **Concluído**
+* **Resumo:** Implementado o módulo de verificação de ficheiros em `drivesync_app/verificador.py` com a função `verify_sync`. Esta função itera pelos ficheiros locais, compara-os com o estado (`processed_items`) e verifica os metadados (nome, tamanho, estado de 'trashed') dos ficheiros correspondentes no Google Drive. Discrepâncias como ficheiros locais não presentes no estado, ficheiros no estado mas em falta no Drive (ou na lixeira), e incompatibilidades de tamanho são registadas. Integrado em `main.py` através de um novo argumento CLI `--verify`.
+* **Ficheiros Modificados:** `drivesync_app/verificador.py`, `drivesync_app/main.py`.
+
 ---
 
 ## Próximas Tarefas (para Jules)
-
-### 📋 Tarefa 10: Módulo de Verificação de Ficheiros
-* **Branch Sugerida:** `feature/file-verification`
-* **Prompt para Jules (Inglês):**
-    ```
-    Implement the file verification module in `drivesync_app/verificador.py` and integrate it into `main.py`.
-
-    1.  **Create `verify_sync(config, drive_service, current_state)` function in `verificador.py`:**
-        * Iterate through local files using `processador_arquivos.walk_local_directory()`.
-        * For each local file, check if it's listed in `current_state['processed_items']`.
-            * If not, log it as "local file not found in sync state".
-            * If yes, retrieve its Drive ID from the state.
-            * (Optional but recommended) Use `drive_service.files().get()` with `fields='id,name,md5Checksum,size'` to fetch metadata for the file from Drive using its ID.
-            * Compare local file size with Drive file size (if available in Drive metadata).
-            * (More advanced) If local MD5 can be calculated, compare with `md5Checksum` from Drive.
-            * Log any discrepancies found (e.g., "size mismatch", "checksum mismatch", "file missing on Drive but in state").
-        * (Optional) List files in the target Drive folder structure and check if any exist on Drive but are not in the local source or in the sync state (orphaned files on Drive).
-    2.  **Integrate into `main.py`:**
-        * Add a `--verify` command-line argument.
-        * If `--verify` is passed, after authentication and loading state, call `verificador.verify_sync()`.
-    ```
-* **Ficheiros a Modificar:** `drivesync_app/verificador.py`, `drivesync_app/main.py`.
-* **Considerações:** A verificação pode ser intensiva em API calls. Cálculo de MD5 local pode ser lento para ficheiros grandes.
-
----
 
 ### 📋 Tarefa 11: Otimização e Refinamentos
 * **Branch Sugerida:** `feature/optimizations`

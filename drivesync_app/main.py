@@ -11,6 +11,7 @@ from drivesync_app.gerenciador_estado import load_state, save_state
 from drivesync_app.gerenciador_drive import find_or_create_folder, list_folder_contents
 from drivesync_app.processador_arquivos import walk_local_directory
 from .sync_logic import run_sync # Main synchronization logic
+from .verificador import verify_sync # Verification logic
 
 def main():
     """Função principal para executar o aplicativo."""
@@ -52,6 +53,8 @@ def main():
                         help='Override the target_drive_folder_id from config.ini for the current run.')
     parser.add_argument('--dry-run', action='store_true',
                         help='Simulate sync operations without making any changes to Google Drive or local state. Use with --sync.')
+    parser.add_argument('--verify', action='store_true',
+                        help='Verify synced files against Drive and local state. Compares local file sizes with Drive file sizes.')
 
     args = parser.parse_args()
 
@@ -75,7 +78,7 @@ def main():
     drive_service = None # Inicializar drive_service
 
     # Autenticação e obtenção do drive_service se argumentos específicos que o requerem forem passados
-    if args.authenticate or args.test_drive_ops or args.sync:
+    if args.authenticate or args.test_drive_ops or args.sync or args.verify: # Added args.verify
         logger.info("Uma operação que requer autenticação do Drive foi solicitada.")
         drive_service = get_drive_service(config)
 
@@ -183,8 +186,20 @@ def main():
         else:
             logger.error("Falha ao autenticar com o Google Drive ou serviço não disponível. Sincronização interrompida.")
 
+    # Lógica para --verify (deve ser após a obtenção do drive_service e carregamento do estado_app)
+    if args.verify:
+        logger.info("Processo de verificação iniciado pelo argumento --verify.")
+        if drive_service:
+            if estado_app is not None:
+                verify_sync(config, drive_service, estado_app, logger) # Pass the main logger
+                logger.info("Chamada para verify_sync concluída.")
+            else:
+                logger.error("Estado da aplicação não carregado. Verificação interrompida.")
+        else:
+            logger.error("Falha ao autenticar com o Google Drive ou serviço não disponível. Verificação interrompida.")
+
     # Default behavior: if no action argument is provided
-    if not (args.authenticate or args.list_local or args.test_drive_ops or args.sync):
+    if not (args.authenticate or args.list_local or args.test_drive_ops or args.sync or args.verify): # Added args.verify
         logger.info("Nenhuma ação específica solicitada. Use --help para ver as opções.")
         parser.print_help()
 
@@ -201,15 +216,22 @@ def main():
     # Se for dry_run, as modificações em `estado_app` dentro de `run_sync` foram condicionais
     # e não deveriam ter ocorrido, mas `save_state` é chamado de qualquer forma.
     # `run_sync` deve garantir que não modifica `estado_app` se `dry_run` for True.
+    # Verification logic does not modify state, so save_state is fine after verify.
     if estado_app is not None:
-        if args.sync and args.dry_run:
-            logger.info("[Dry Run] Estado da aplicação não foi salvo pois nenhuma alteração deveria ter ocorrido.")
+        if args.sync and args.dry_run: # If sync was called with dry_run, state shouldn't have changed.
+            logger.info("[Dry Run] Estado da aplicação não foi salvo pois nenhuma alteração de sincronização deveria ter ocorrido.")
+        elif args.verify: # If verify was called, state is not modified by it.
+            logger.info("Verificação concluída. O estado da aplicação não é modificado pela verificação.")
+            # Optionally, could skip saving state here if no other action modified it, but saving is harmless.
+            if save_state(config, estado_app): # Save state in case it was loaded and fixed (e.g. missing keys)
+                logger.info("Estado da aplicação salvo (pós-verificação, sem alterações da verificação).")
+            else:
+                logger.error("Falha ao salvar o estado da aplicação (pós-verificação).")
         elif save_state(config, estado_app):
             logger.info("Estado da aplicação salvo com sucesso.")
         else:
-            # Avoid saving if it's a dry run that somehow got here, or if save_state itself failed.
-            if not (args.sync and args.dry_run): # Only log error if it wasn't a dry run sync
-                 logger.error("Falha ao salvar o estado da aplicação.")
+            # This case would be for non-sync-dry_run, non-verify actions where save_state failed.
+            logger.error("Falha ao salvar o estado da aplicação.")
     else:
         logger.warning("Variável de estado não definida, não foi possível salvar o estado.")
 
