@@ -91,20 +91,47 @@ def run_sync(config, drive_service, app_state):
 
         elif item['type'] == 'file':
             logger.info(f"Processing file: '{relative_item_path}' (Local Name: '{item_name}')")
+            current_local_size = item['size']
+            current_local_modified_time = item['modified_time']
+            needs_upload = True
+
             if relative_item_path in app_state['processed_items']:
-                logger.info(f"File '{relative_item_path}' already in processed_items. Skipping for this phase.")
-                continue
+                stored_item_info = app_state['processed_items'][relative_item_path]
+                stored_size = stored_item_info.get('local_size')
+                stored_modified_time = stored_item_info.get('local_modified_time')
+                drive_id = stored_item_info.get('drive_id')
 
-            local_full_path = item['full_path']
-            logger.info(f"Attempting to upload file '{local_full_path}' to Drive parent ID '{drive_parent_id}' as '{item_name}'")
-            # Use the new resumable upload function
-            drive_file_id = gerenciador_drive.upload_file(drive_service, local_full_path, item_name, drive_parent_id)
-
-            if drive_file_id:
-                logger.info(f"Successfully uploaded file '{relative_item_path}'. Drive File ID: '{drive_file_id}'")
-                # Task 8 will handle adding to app_state['processed_items']
+                if stored_size == current_local_size and stored_modified_time == current_local_modified_time:
+                    logger.info(f"File '{relative_item_path}' is already synced and unchanged. Skipping. Drive ID: {drive_id}")
+                    needs_upload = False
+                else:
+                    logger.info(f"File '{relative_item_path}' has changed (Size: {stored_size} -> {current_local_size}, ModTime: {stored_modified_time} -> {current_local_modified_time}). Re-uploading. Old Drive ID: {drive_id}")
             else:
-                logger.error(f"Failed to upload file '{relative_item_path}'.")
+                logger.info(f"File '{relative_item_path}' is new. Preparing for upload.")
+
+            if needs_upload:
+                local_full_path = item['full_path']
+                # item_name is already defined above
+                # drive_parent_id is already defined above
+
+                if drive_parent_id: # This check was already implicitly part of the outer loop structure, but good to be explicit
+                    logger.info(f"Attempting to upload file '{local_full_path}' to Drive parent ID '{drive_parent_id}' as '{item_name}'")
+                    new_drive_file_id = gerenciador_drive.upload_file(drive_service, local_full_path, item_name, drive_parent_id)
+
+                    if new_drive_file_id:
+                        logger.info(f"File '{relative_item_path}' uploaded/re-uploaded successfully. New Drive ID: {new_drive_file_id}")
+                        app_state['processed_items'][relative_item_path] = {
+                            'drive_id': new_drive_file_id,
+                            'local_size': current_local_size,
+                            'local_modified_time': current_local_modified_time
+                        }
+                        logger.info(f"Updated state for '{relative_item_path}' with new Drive ID and local metadata.")
+                    else:
+                        logger.error(f"Upload failed for '{relative_item_path}'. State not updated for this item.")
+                else:
+                    # This case should have been caught by the check at the beginning of the loop for drive_parent_id
+                    logger.error(f"Cannot upload file '{relative_item_path}' because its parent Drive folder ID could not be determined. Skipping.")
+            # If needs_upload is False, we've already logged skipping it.
 
     logger.info(f"Completed processing loop for source folder: {source_folder_str}.")
     logger.info("Synchronization process run_sync function call completed.")
