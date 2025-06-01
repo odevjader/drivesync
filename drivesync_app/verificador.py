@@ -89,10 +89,10 @@ def verify_sync(config, drive_service, db_connection, logger_instance):
                 if drive_file_metadata.get('trashed', False):
                     logger.warning(f"File '{relative_path}' (Drive ID: {drive_id}) is in the TRASH on Google Drive.")
                     drive_missing_or_trashed_files_count +=1
-                    else:
-                        drive_size_str = drive_file_metadata.get('size')
-                        if drive_size_str is not None:
-                            try:
+                else:
+                    drive_size_str = drive_file_metadata.get('size')
+                    if drive_size_str is not None:
+                        try:
                                 drive_size_int = int(drive_size_str) # Drive API returns size as string
                                 if local_size == drive_size_int:
                                     logger.info(f"File '{relative_path}' (Drive ID: {drive_id}): Local size ({local_size}) matches Drive size ({drive_size_int}). OK.")
