@@ -152,8 +152,9 @@ Com a v1.0 estabelecida, focaremos em robustez e usabilidade para grandes volume
 
 ---
 
-### ⏳ Tarefa P3: Implementar Acompanhamento Aprimorado de Progresso e Relatórios
-* **Status:** ⏳ **Em Andamento / Próxima Tarefa**
+### ✅ Tarefa P3: Implementar Acompanhamento Aprimorado de Progresso e Relatórios
+* **Status:** ✅ **Concluído**
+* **Resumo:** Adicionada barra de progresso (`tqdm`) para visualização do andamento da sincronização de arquivos em `sync_logic.py`. Implementado um relatório final detalhado ao término da sincronização, com estatísticas sobre arquivos processados, transferidos, ignorados, falhas, tempo total e volume de dados. `tqdm` adicionado às dependências.
 * **Objetivo:** Fornecer feedback visual e sumários mais claros sobre o progresso da sincronização, especialmente útil para grandes volumes de dados, para que o utilizador entenda melhor o que está a acontecer e quanto falta.
 * **Prompt para Jules (Inglês):**
     ```
@@ -190,6 +191,10 @@ Com a v1.0 estabelecida, focaremos em robustez e usabilidade para grandes volume
 * **Considerações:** A contagem inicial de todos os ficheiros/tamanho total para o `tqdm` pode adicionar um pequeno atraso no início de uma sincronização muito grande, mas o benefício do feedback visual geralmente compensa.
 
 ---
+
+## Melhorias Pós-v1.0 Concluídas
+
+Todas as tarefas de melhoria Pós-v1.0 planejadas (P1, P2, P3) foram concluídas. O foco agora se volta para os "Possíveis Trabalhos Futuros" listados abaixo.
 
 ## Possíveis Trabalhos Futuros (Fora do Escopo Original)
 * Implementação de tratamento para exclusões de arquivos (local ou Drive).

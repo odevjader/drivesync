@@ -42,11 +42,11 @@ DriveSync é um aplicativo Python de linha de comando projetado para sincronizar
 
 * **Tratamento Avançado de Erros e Retentativas para API:** Mecanismo configurável de retentativas com backoff exponencial para chamadas à API do Google Drive, aumentando a resiliência contra erros transitórios e limites de cota. (Configurável em `config.ini` na seção `[API_Retries]`)
 
+* **Acompanhamento de Progresso Detalhado:** Exibição de barra de progresso no console (`tqdm`) durante a sincronização de arquivos e um relatório final resumindo a operação (total de arquivos, transferidos, ignorados, falhas, tempo total, etc.).
+
 * **Documentação** e Testes **Manuais:** `README.md` detalhado, docstrings no código e um guia `TESTING_STRATEGY.md`.
 
 ### Planejadas (Melhorias Pós-v1.0)
-
-* **Acompanhamento** Aprimorado de Progresso e Relatórios **(Tarefa P3):** Adicionar barras de progresso no console (`tqdm`), detalhes de progresso por arquivo, sumários periódicos e um relatório final de sincronização para melhor feedback ao usuário em operações longas.
 
 * **Tratamento de Exclusões:** Lógica para lidar com arquivos excluídos localmente ou no Drive.
 
