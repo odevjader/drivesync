@@ -39,86 +39,24 @@ Este documento detalha o plano de desenvolvimento para o projeto DriveSync, incl
 * **Resumo:** Implementado `walk_local_directory` em `drivesync_app/processador_arquivos.py` para travessia de sistema de ficheiros local, usando `os.walk` e `pathlib`. Adicionado argumento `--list-local` a `main.py` para testar esta funcionalidade, lendo `source_folder` de `config.ini`.
 * **Ficheiros Modificados:** `drivesync_app/processador_arquivos.py`, `drivesync_app/main.py`, `config.ini`.
 
----
-
-## Próximas Tarefas (para Jules)
-
 ### ✅ Tarefa 6: Lógica Principal de Sincronização - Fase 1 (Sincronização de Pastas e Upload Básico de Ficheiros)
 * **Status:** ✅ **Concluído**
-* **Branch Sugerida:** `feature/sync-logic-phase1`
-* **Prompt para Jules (Inglês):**
-    ```
-    Integrate the local file processing with Drive operations to implement the initial synchronization logic in `drivesync_app/main.py` or a new dedicated sync module if preferred.
-
-    1.  **Define a main sync function/method:** This function will orchestrate the process.
-    2.  **Command-Line Argument:** Add a `--sync` argument to `main.py` to trigger this function.
-    3.  **Process Flow:**
-        * Load configuration, setup logger, authenticate with Google Drive, load state.
-        * Get the `source_folder` from config and `target_drive_folder_id` (or 'root' if not specified).
-        * Use `processador_arquivos.walk_local_directory()` to iterate through local items.
-        * **For each local folder:**
-            * Use `gerenciador_estado.load_state()` to check if this folder's relative path has already been mapped to a Drive folder ID (`folder_mappings`).
-            * If not mapped, or if you want to ensure it exists, use `gerenciador_drive.find_or_create_folder()` to find/create the corresponding folder on Google Drive. The parent ID for subfolders will be the Drive ID of their local parent folder (this requires careful tracking of parent Drive IDs).
-            * Store the mapping (local relative path -> Drive folder ID) in the `folder_mappings` part of the state using `gerenciador_estado.save_state()` after each successful mapping or in batches.
-        * **For each local file:**
-            * (For this phase, a basic check) Use `gerenciador_estado.load_state()` to check if this file (e.g., by its relative path) is in `processed_items`. If so, log and skip for now.
-            * Determine its parent Drive folder ID using the `folder_mappings` from the state.
-            * Implement a basic file upload in `gerenciador_drive.py`: `upload_basic_file(drive_service, local_file_path, file_name, parent_drive_folder_id)`. This initial version can use `MediaFileUpload` without advanced resumable features for now.
-            * Call this upload function.
-            * Log success/failure. (State update for files will be in a later task).
-        * Ensure `gerenciador_estado.save_state()` is called periodically or at the end to save `folder_mappings`.
-
-    Focus on correctly mapping and creating the folder structure on Drive and performing basic uploads. Detailed file state tracking and resumable uploads will be next.
-    ```
-* **Ficheiros a Modificar:** `drivesync_app/main.py`, `drivesync_app/gerenciador_drive.py`, `drivesync_app/processador_arquivos.py` (potentially for easier integration), `drivesync_app/gerenciador_estado.py` (to ensure state structure supports folder mappings).
-* **Considerações:** Esta é uma tarefa complexa. A lógica de mapear a estrutura de pastas locais para o Drive e gerir os IDs das pastas pai no Drive é crucial.
-
----
+* **Resumo:** Implementada a lógica inicial de sincronização em `drivesync_app/sync_logic.py` (invocada por `main.py` via argumento `--sync`). Mapeia estruturas de pastas locais para o Drive e realiza uploads básicos de arquivos. O estado das pastas (`folder_mappings`) é atualizado.
+* **Ficheiros Modificados:** `drivesync_app/sync_logic.py`, `drivesync_app/main.py`, `drivesync_app/gerenciador_drive.py`.
 
 ### ✅ Tarefa 7: Uploads Resumíveis e Tratamento Avançado de Erros para Ficheiros
 * **Status:** ✅ **Concluído**
-* **Branch Sugerida:** `feature/resumable-uploads`
-* **Prompt para Jules (Inglês):**
-    ```
-    Enhance the file upload functionality in `drivesync_app/gerenciador_drive.py` to support resumable uploads for large files and implement more robust error handling.
-
-    1.  **Modify/Create `upload_file(drive_service, local_file_path, file_name, parent_drive_folder_id, mime_type=None)` function:**
-        * Use `MediaFileUpload` with `resumable=True`.
-        * Allow specifying `mime_type`; if None, try to guess it (e.g., using `mimetypes` module).
-        * Implement a loop to handle `next_chunk()` for resumable uploads, logging progress (e.g., percentage complete).
-        * Implement robust error handling for API calls during upload (e.g., `googleapiclient.errors.HttpError`), including retries with exponential backoff for transient errors.
-        * Return the Drive file ID upon successful upload, or None/raise exception on failure.
-    2.  **Integrate with `main.py`'s sync logic:** Replace the `upload_basic_file` call with this new `upload_file` function.
-    ```
-* **Ficheiros a Modificar:** `drivesync_app/gerenciador_drive.py`, `drivesync_app/main.py`.
-* **Considerações:** Detalhes da API de upload resumível do Google.
-
----
+* **Resumo:** Aprimorada a função de upload de arquivos em `drivesync_app/gerenciador_drive.py` (agora `upload_file`) para suportar uploads resumíveis, progresso em chunks, e tratamento robusto de erros com retentativas exponenciais. `sync_logic.py` atualizado para usar esta nova função.
+* **Ficheiros Modificados:** `drivesync_app/gerenciador_drive.py`, `drivesync_app/sync_logic.py`.
 
 ### ✅ Tarefa 8: Integração Completa do Gerenciamento de Estado (Itens Processados)
 * **Status:** ✅ **Concluído**
-* **Branch Sugerida:** `feature/full-state-integration`
-* **Prompt para Jules (Inglês):**
-    ```
-    Fully integrate state management with the file processing and upload logic.
-
-    1.  **Refine State Structure for `processed_items`:** The value for each processed item (keyed by its relative local path) in `gerenciador_estado.state_data['processed_items']` should store information like:
-        * `drive_id`: The Google Drive ID of the uploaded file.
-        * `local_size`: Size of the local file when it was uploaded.
-        * `local_modified_time`: Last modified timestamp of the local file.
-        * `md5_checksum_drive` (Optional, if retrieved post-upload): MD5 checksum from Drive.
-    2.  **Update Sync Logic in `main.py`:**
-        * Before attempting to upload a file, check `processed_items`:
-            * If the file's relative path exists in `processed_items`, compare its current `local_size` and `local_modified_time` with the stored values.
-            * If they match, log that the file is already synced and skip it.
-            * If they differ, log that the file has changed and proceed to re-upload (potentially deleting the old one on Drive or versioning - for now, simple re-upload is fine).
-        * After a successful file upload using `gerenciador_drive.upload_file()`, update the `processed_items` in the state with the new file's details (Drive ID, local size, local modified time).
-        * Ensure `gerenciador_estado.save_state(config, current_state)` is called after processing each file or in small batches to persist progress.
-    ```
-* **Ficheiros a Modificar:** `drivesync_app/main.py`, `drivesync_app/gerenciador_estado.py`.
-* **Considerações:** Decidir a estratégia para ficheiros modificados (re-upload, versionamento). Garantir que o estado é salvo frequentemente.
+* **Resumo:** Integrado o gerenciamento de estado completo para arquivos em `drivesync_app/sync_logic.py`. Agora verifica `processed_items` (usando tamanho e data de modificação do arquivo local) para evitar re-uploads desnecessários e atualiza o estado após uploads bem-sucedidos.
+* **Ficheiros Modificados:** `drivesync_app/sync_logic.py`, `drivesync_app/gerenciador_estado.py`.
 
 ---
+
+## Próximas Tarefas (para Jules)
 
 ### 📋 Tarefa 9: Melhorias na Interface de Linha de Comando (CLI)
 * **Branch Sugerida:** `feature/cli-improvements`
