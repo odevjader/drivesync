@@ -3,9 +3,10 @@
 import logging
 from drivesync_app import processador_arquivos # To iterate through local files
 from drivesync_app import gerenciador_estado # To access state DB
+from drivesync_app import gerenciador_drive # For get_file_metadata
 from googleapiclient.errors import HttpError # To handle Drive API errors
 
-def verify_sync(config, drive_service, db_connection, logger_instance): # Changed current_state to db_connection
+def verify_sync(config, drive_service, db_connection, logger_instance):
     """
     Verifies the consistency of synchronized files between the local source,
     the application's recorded state, and Google Drive.
@@ -69,17 +70,25 @@ def verify_sync(config, drive_service, db_connection, logger_instance): # Change
                     mismatch_files_count +=1
                     continue
 
-                try:
-                    logger.debug(f"Verifying file '{relative_path}' (Drive ID: {drive_id}) on Google Drive.")
-                    # Request 'size' (string) and 'trashed' (boolean) fields
-                    drive_file_metadata = drive_service.files().get(
-                        fileId=drive_id,
-                        fields='id,name,size,trashed'
-                    ).execute()
+                # Use gerenciador_drive.get_file_metadata to benefit from retry logic
+                drive_file_metadata = gerenciador_drive.get_file_metadata(
+                    drive_service,
+                    drive_id,
+                    fields='id,name,size,trashed'
+                )
 
-                    if drive_file_metadata.get('trashed', False):
-                        logger.warning(f"File '{relative_path}' (Drive ID: {drive_id}) is in the TRASH on Google Drive.")
-                        drive_missing_or_trashed_files_count +=1
+                if drive_file_metadata is None:
+                    # get_file_metadata already logs the error after retries
+                    logger.error(f"Could not retrieve metadata for file '{relative_path}' (Drive ID: {drive_id}) from Drive after retries. Marking as a discrepancy.")
+                    # This could be a 404 (missing) or persistent server error.
+                    # If it was a 404, it might be caught by specific HttpError check below, but this is a fallback.
+                    drive_missing_or_trashed_files_count += 1 # Count as missing/error
+                    continue # Skip further checks for this file
+
+                # Proceed with checks using drive_file_metadata
+                if drive_file_metadata.get('trashed', False):
+                    logger.warning(f"File '{relative_path}' (Drive ID: {drive_id}) is in the TRASH on Google Drive.")
+                    drive_missing_or_trashed_files_count +=1
                     else:
                         drive_size_str = drive_file_metadata.get('size')
                         if drive_size_str is not None:
@@ -101,17 +110,16 @@ def verify_sync(config, drive_service, db_connection, logger_instance): # Change
                             logger.warning(f"File '{relative_path}' (Drive ID: {drive_id}): No size information returned from Drive. (Is it a Google Workspace document type?). Local size: {local_size}.")
                             # Consider if this should be a mismatch. For now, treating as a warning.
                             # If it's a Google Doc, it shouldn't have been processed as a regular file with size in `processed_items` anyway.
+                # The HttpError (including 404) should ideally be handled by the retry decorator in get_file_metadata.
+                # If get_file_metadata returns None, it means retries were exhausted or a non-retryable error occurred.
+                # Specific HttpError handling here might become redundant if get_file_metadata robustly returns None on failure.
+                # However, keeping it for now in case get_file_metadata re-raises certain specific HttpErrors
+                # that are not caught by its own try-except block (which it shouldn't, ideally).
+                # The main change is that get_file_metadata now centralizes the API call and its retries.
 
-                except HttpError as e:
-                    if e.resp.status == 404:
-                        logger.error(f"File '{relative_path}' (Drive ID: {drive_id}) found in state but MISSING on Google Drive (404 Not Found).")
-                        drive_missing_or_trashed_files_count += 1
-                    else:
-                        logger.error(f"API Error verifying file '{relative_path}' (Drive ID: {drive_id}): {e}")
-                        mismatch_files_count += 1 # Count as a mismatch due to API error during check
-                except Exception as e:
-                    logger.error(f"Unexpected error verifying file '{relative_path}' (Drive ID: {drive_id}) on Drive: {e}")
-                    mismatch_files_count += 1 # Count as a mismatch due to unexpected error
+            except Exception as e: # Catch any other unexpected error during metadata processing
+                logger.error(f"Unexpected error processing metadata for file '{relative_path}' (Drive ID: {drive_id}): {e}", exc_info=True)
+                mismatch_files_count += 1
 
             else: # file not in processed_items table in DB
                 logger.warning(f"Local file '{relative_path}' NOT FOUND in sync state DB (processed_items table).")

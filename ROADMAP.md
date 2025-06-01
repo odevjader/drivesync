@@ -109,8 +109,9 @@ Com a v1.0 estabelecida, focaremos em robustez e usabilidade para grandes volume
 
 ---
 
-### ⏳ Tarefa P2: Implementar Tratamento Avançado de Erros e Retentativas para API do Drive
-* **Status:** ⏳ **Em Andamento / Próxima Tarefa**
+### ✅ Tarefa P2: Implementar Tratamento Avançado de Erros e Retentativas para API do Drive
+* **Status:** ✅ **Concluído**
+* **Resumo:** Implementado um mecanismo de retentativa configurável com backoff exponencial para todas as chamadas à API do Google Drive em `gerenciador_drive.py` usando um decorador. As configurações de retentativa (`max_retries`, `initial_backoff_seconds`, etc.) são definidas na nova seção `[API_Retries]` do `config.ini`. `sync_logic.py` e `verificador.py` foram atualizados para usar as funções com retentativa e para lidar com falhas persistentes de forma mais robusta.
 * **Objetivo:** Tornar a aplicação significativamente mais resiliente a erros transitórios da API do Google Drive e a problemas de cota, implementando um mecanismo de retentativa configurável com backoff exponencial.
 * **Prompt para Jules (Inglês):**
     ```
@@ -151,8 +152,8 @@ Com a v1.0 estabelecida, focaremos em robustez e usabilidade para grandes volume
 
 ---
 
-### 📋 Tarefa P3: Implementar Acompanhamento Aprimorado de Progresso e Relatórios
-* **Status:** 📋 **Planejado**
+### ⏳ Tarefa P3: Implementar Acompanhamento Aprimorado de Progresso e Relatórios
+* **Status:** ⏳ **Em Andamento / Próxima Tarefa**
 * **Objetivo:** Fornecer feedback visual e sumários mais claros sobre o progresso da sincronização, especialmente útil para grandes volumes de dados, para que o utilizador entenda melhor o que está a acontecer e quanto falta.
 * **Prompt para Jules (Inglês):**
     ```

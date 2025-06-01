@@ -8,7 +8,7 @@ import os
 from drivesync_app.logger_config import setup_logger
 from drivesync_app.autenticacao_drive import get_drive_service
 from drivesync_app import gerenciador_estado # Updated import
-from drivesync_app.gerenciador_drive import find_or_create_folder, list_folder_contents
+from drivesync_app.gerenciador_drive import find_or_create_folder, list_folder_contents, init_drive_config
 from drivesync_app.processador_arquivos import walk_local_directory
 from .sync_logic import run_sync # Main synchronization logic
 from .verificador import verify_sync # Verification logic
@@ -56,6 +56,9 @@ def main():
     # Passamos o config, que pode estar vazio se o arquivo não foi lido.
     # setup_logger é responsável por lidar com isso usando seus fallbacks.
     setup_logger(config)
+
+    # Inicializar a configuração do gerenciador_drive para o decorador de retentativas
+    init_drive_config(config)
 
     # Obter o logger para este módulo
     logger = logging.getLogger(__name__) # Logger para main.py

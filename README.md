@@ -40,11 +40,11 @@ DriveSync é um aplicativo Python de linha de comando projetado para sincronizar
 
 * **Verificação de Sincronização:** Compara arquivos locais com o estado registrado e os metadados do Google Drive, reportando discrepâncias.
 
+* **Tratamento Avançado de Erros e Retentativas para API:** Mecanismo configurável de retentativas com backoff exponencial para chamadas à API do Google Drive, aumentando a resiliência contra erros transitórios e limites de cota. (Configurável em `config.ini` na seção `[API_Retries]`)
+
 * **Documentação** e Testes **Manuais:** `README.md` detalhado, docstrings no código e um guia `TESTING_STRATEGY.md`.
 
 ### Planejadas (Melhorias Pós-v1.0)
-
-* **Tratamento** Avançado de Erros **e Retentativas para API (Tarefa P2):** Implementar um mecanismo sofisticado e configurável de retentativas com backoff exponencial para todas as chamadas à API do Google Drive, aumentando a resiliência contra erros transitórios e limites de cota.
 
 * **Acompanhamento** Aprimorado de Progresso e Relatórios **(Tarefa P3):** Adicionar barras de progresso no console (`tqdm`), detalhes de progresso por arquivo, sumários periódicos e um relatório final de sincronização para melhor feedback ao usuário em operações longas.
 
@@ -121,6 +121,8 @@ DriveSync é um aplicativo Python de linha de comando projetado para sincronizar
      * `log_file`: (Na seção `[Logging]`) Nome do arquivo de log (ex: `app.log`).
 
      * `log_level`: (Na seção `[Logging]`) Nível de log (DEBUG, INFO, WARNING, ERROR, CRITICAL).
+
+     * A seção `[API_Retries]` (opcional, com valores padrão) permite configurar o comportamento de retentativas para chamadas à API do Google Drive, como `max_retries`, `initial_backoff_seconds`, `max_backoff_seconds` e `backoff_factor`.
 
    **Nota Importante:** Após preencher o `config.ini` e colocar o arquivo de credenciais (`client_secret_file`), execute o comando de autenticação pela primeira vez:
 
